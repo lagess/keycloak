@@ -39,21 +39,29 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
 
     @Override
     public void begin() {
+        logger.error("BEGIN");
         em.getTransaction().begin();
     }
 
     @Override
     public void commit() {
         try {
+            logger.error("COMMIT");
             logger.trace("Committing transaction");
+        //    releaseSavePoint("cockroach_restart");
             em.getTransaction().commit();
         } catch (PersistenceException e) {
+            if (e.getCause().getMessage().contains("Retry")){
+                throw new RuntimeException("RetryableExp", e);
+            }
+
             throw PersistenceExceptionConverter.convert(e.getCause() != null ? e.getCause() : e);
         }
     }
 
     @Override
     public void rollback() {
+        logger.error("ROLLBACK");
         logger.trace("Rollback transaction");
         em.getTransaction().rollback();
     }
@@ -71,5 +79,32 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
     @Override
     public boolean isActive() {
         return em.getTransaction().isActive();
+    }
+
+    @Override
+    public void createSavePoint(String savePointId){
+        //TODO Fix SQL concat is Bad for security
+        em.createNativeQuery("SAVEPOINT "+savePointId+";").executeUpdate();
+    }
+
+    @Override
+    public void releaseSavePoint(String savePointId){
+        try {
+            System.out.println("Release savepoint");
+            //TODO Fix SQL concat is Bad for security
+            em.createNativeQuery("RELEASE SAVEPOINT " + savePointId + ";").executeUpdate();
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void rollbackToSavePoint(String savePointId){
+        //TODO Fix SQL concat is Bad for security
+        try {
+            em.createNativeQuery("ROLLBACK TO SAVEPOINT " + savePointId + ";").executeUpdate();
+        }catch(Exception e){
+            e.printStackTrace();
+        }
     }
 }

@@ -54,5 +54,7 @@ public class LDAPTransaction extends AbstractKeycloakTransaction {
         logger.warn("Transaction rollback! Ignoring LDAP updates for object " + ldapUser.getDn().toString());
     }
 
+
+
 }
 

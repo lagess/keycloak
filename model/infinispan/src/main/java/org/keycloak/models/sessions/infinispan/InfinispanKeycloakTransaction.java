@@ -250,4 +250,19 @@ public class InfinispanKeycloakTransaction implements KeycloakTransaction {
         return cache.getAdvancedCache()
                 .withFlags(Flag.IGNORE_RETURN_VALUES, Flag.SKIP_REMOTE_LOOKUP);
     }
+
+    @Override
+    public void createSavePoint(String savePointId) {
+        System.out.println("Default impl");
+    }
+
+    @Override
+    public void releaseSavePoint(String savePointId) {
+        System.out.println("Default impl");
+    }
+
+    @Override
+    public void rollbackToSavePoint(String savePointId) {
+        System.out.println("Default impl");
+    }
 }

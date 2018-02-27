@@ -17,7 +17,8 @@
 			<property name="hibernate.connection.user" value="sa" />
 			<property name="hibernate.flushMode" value="FLUSH_AUTO" />
 			<property name="hibernate.hbm2ddl.auto" value="update" />
-			<property name="hibernate.show_sql" value="false" />
+			<property name="hibernate.show_sql" value="true" />
+			<property name="hibernate.transaction.coordinator_class" value="com.cockroachlabs.CockroachDBTransactionCoordinatorBuilder" />
 		</properties>
 	</persistence-unit>
 </persistence>

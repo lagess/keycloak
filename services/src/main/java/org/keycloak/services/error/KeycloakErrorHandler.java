@@ -56,38 +56,39 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
 
     @Override
     public Response toResponse(Throwable throwable) {
-        KeycloakTransaction tx = ResteasyProviderFactory.getContextData(KeycloakTransaction.class);
-        tx.setRollbackOnly();
-
-        int statusCode = getStatusCode(throwable);
-
-        if (statusCode >= 500 && statusCode <= 599) {
-            logger.error("Uncaught server error", throwable);
-        }
-
-        if (!MediaTypeMatcher.isHtmlRequest(headers)) {
-            return Response.status(statusCode).build();
-        }
-
-        try {
-            RealmModel realm = resolveRealm();
-
-            ThemeProvider themeProvider = session.getProvider(ThemeProvider.class, "extending");
-            Theme theme = themeProvider.getTheme(realm.getLoginTheme(), Theme.Type.LOGIN);
-
-            Locale locale = LocaleHelper.getLocale(session, realm, null);
-
-            FreeMarkerUtil freeMarker = new FreeMarkerUtil();
-            Map<String, Object> attributes = initAttributes(realm, theme, locale, statusCode);
-
-            String templateName = "error.ftl";
-
-            String content = freeMarker.processTemplate(attributes, templateName, theme);
-            return Response.status(statusCode).type(MediaType.TEXT_HTML_UTF_8_TYPE).entity(content).build();
-        } catch (Throwable t) {
-            logger.error("Failed to create error page", t);
-            return Response.serverError().build();
-        }
+        throw new RuntimeException(throwable);
+//        KeycloakTransaction tx = ResteasyProviderFactory.getContextData(KeycloakTransaction.class);
+//        tx.setRollbackOnly();
+//
+//        int statusCode = getStatusCode(throwable);
+//
+//        if (statusCode >= 500 && statusCode <= 599) {
+//            logger.error("Uncaught server error", throwable);
+//        }
+//
+//        if (!MediaTypeMatcher.isHtmlRequest(headers)) {
+//            return Response.status(statusCode).build();
+//        }
+//
+//        try {
+//            RealmModel realm = resolveRealm();
+//
+//            ThemeProvider themeProvider = session.getProvider(ThemeProvider.class, "extending");
+//            Theme theme = themeProvider.getTheme(realm.getLoginTheme(), Theme.Type.LOGIN);
+//
+//            Locale locale = LocaleHelper.getLocale(session, realm, null);
+//
+//            FreeMarkerUtil freeMarker = new FreeMarkerUtil();
+//            Map<String, Object> attributes = initAttributes(realm, theme, locale, statusCode);
+//
+//            String templateName = "error.ftl";
+//
+//            String content = freeMarker.processTemplate(attributes, templateName, theme);
+//            return Response.status(statusCode).type(MediaType.TEXT_HTML_UTF_8_TYPE).entity(content).build();
+//        } catch (Throwable t) {
+//            logger.error("Failed to create error page", t);
+//            return Response.serverError().build();
+//        }
     }
 
     private int getStatusCode(Throwable throwable) {

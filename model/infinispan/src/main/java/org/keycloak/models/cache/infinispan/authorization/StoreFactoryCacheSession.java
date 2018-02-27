@@ -158,6 +158,21 @@ public class StoreFactoryCacheSession implements CachedStoreFactoryProvider {
             public boolean isActive() {
                 return transactionActive;
             }
+
+            @Override
+            public void createSavePoint(String savePointId) {
+                System.out.println("Default impl");
+            }
+
+            @Override
+            public void releaseSavePoint(String savePointId) {
+                System.out.println("Default impl");
+            }
+
+            @Override
+            public void rollbackToSavePoint(String savePointId) {
+                System.out.println("Default impl");
+            }
         };
     }
 
@@ -206,6 +221,21 @@ public class StoreFactoryCacheSession implements CachedStoreFactoryProvider {
             @Override
             public boolean isActive() {
                 return transactionActive;
+            }
+
+            @Override
+            public void createSavePoint(String savePointId) {
+                System.out.println("Default impl");
+            }
+
+            @Override
+            public void releaseSavePoint(String savePointId) {
+                System.out.println("Default impl");
+            }
+
+            @Override
+            public void rollbackToSavePoint(String savePointId) {
+                System.out.println("Default impl");
             }
         };
     }

@@ -141,7 +141,8 @@ public class CustomLockService extends StandardLockService {
 
     @Override
     public boolean acquireLock() {
-        if (hasChangeLogLock) {
+       return true;
+        /*if (hasChangeLogLock) {
             // We already have a lock
             return true;
         }
@@ -172,7 +173,7 @@ public class CustomLockService extends StandardLockService {
                 log.debug(de.getMessage(), de);
             }
             return false;
-        }
+        }*/
     }
 
 

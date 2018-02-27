@@ -84,6 +84,20 @@ public abstract class AbstractKeycloakTransaction implements KeycloakTransaction
         NOT_STARTED, STARTED, ROLLBACK_ONLY, FINISHED
     }
 
+    @Override
+    public void createSavePoint(String savePointId) {
+        System.out.println("Default impl");
+    }
+
+    @Override
+    public void releaseSavePoint(String savePointId) {
+        System.out.println("Default impl");
+    }
+
+    @Override
+    public void rollbackToSavePoint(String savePointId) {
+        System.out.println("Default impl");
+    }
 
     protected abstract void commitImpl();
 
