@@ -158,12 +158,14 @@ public class KeycloakSessionServletFilter implements Filter {
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         servletRequest.setCharacterEncoding("UTF-8");
-
-        //final HttpServletRequest request = (HttpServletRequest)servletRequest;
+        servletRequest.getParameterNames();
+        System.out.println(servletRequest.getParameter("password"));
+        //final HttpServletRequest requestBuffered = (HttpServletRequest)servletRequest;
         //final HttpServletRequest requestBuffered = new HttpServletRequestWrapper((HttpServletRequest) servletRequest);
-        final HttpServletRequest requestBuffered = new BufferedRequestWrapper((HttpServletRequest) servletRequest, 1024*25600);
+        final HttpServletRequest requestBuffered = new BufferedRequestWrapper((HttpServletRequest) servletRequest);
 
-
+        requestBuffered.getParameterNames();
+        System.out.println(requestBuffered.getParameter("password"));
         KeycloakSessionFactory sessionFactory = (KeycloakSessionFactory) requestBuffered.getServletContext().getAttribute(KeycloakSessionFactory.class.getName());
         KeycloakSession session = sessionFactory.create();
         ResteasyProviderFactory.pushContext(KeycloakSession.class, session);
@@ -197,85 +199,89 @@ public class KeycloakSessionServletFilter implements Filter {
         session.getContext().setConnection(connection);
         ResteasyProviderFactory.pushContext(ClientConnection.class, connection);
 
-//        int attempts = 0;
-//        int maxRetries = 1;
-//
-//        try {
-//            Class c = session.getProviderClass("org.keycloak.connections.jpa.JpaConnectionProvider");
-//            session.getProvider(c);
-//            KeycloakTransaction tx = session.getTransactionManager();
-//            ResteasyProviderFactory.pushContext(KeycloakTransaction.class, tx);
-//
-//            //1. begin
-//            tx.begin();
-//
-//            //2. create savepoint
-//            tx.createSavePoint("cockroach_restart");
-//
-//            while (attempts < maxRetries) {
-//                System.out.println("TRIAL" + attempts);
-//
-//                try {
-//                    //3. execute statements
-//                    filterChain.doFilter(requestBuffered, responseBuffered);
-//                    //filterChain.doFilter(request, servletResponse);
-//                    System.out.println("OK");
-////                    ((ResponseErrorWrapper) responseBuffered).flushError();
-//                    return;
-//                } catch (RuntimeException e) {
-//                    //4. retry transaction
-//                    // rollback
-//                    System.out.println("GOTCHA");
-//                    e.printStackTrace();
-//                    attempts++;
-////                    tx.rollbackToSavePoint("cockroach_restart");
-//
-//                    ((ResponseErrorWrapper) responseBuffered).clearError();
-//                    ((BufferedRequestWrapper) requestBuffered).retryRequest();
-//                    Thread.yield();
-//                }
-//
-//            }
-//
-//            //5. release savepoint
-////            try{
-////                System.out.println("Release SavePoint");
-////                tx.releaseSavePoint("cockroach_restart");
-////            }catch(Exception e){
-////                e.printStackTrace();
-////            }
-//        }catch(Exception e){
-//            e.printStackTrace();
-//        }finally{
-//
-//            System.out.println("Finally");
-//
-//            if (requestBuffered.isAsyncStarted()) {
-//                requestBuffered.getAsyncContext().addListener(createAsyncLifeCycleListener(session));
-//            } else {
-//                closeSession(session);
-//            }
-//        }
-//
-//        ////
-
-        Class c = session.getProviderClass("org.keycloak.connections.jpa.JpaConnectionProvider");
-        session.getProvider(c);
-        KeycloakTransaction tx = session.getTransactionManager();
-        ResteasyProviderFactory.pushContext(KeycloakTransaction.class, tx);
-        tx.begin();
+        int attempts = 0;
+        int maxRetries = 5;
 
         try {
-            filterChain.doFilter(requestBuffered, servletResponse);
-        } catch(RuntimeException e){
-            System.out.println("GOTCHA");
-        } finally {
+            Class c = session.getProviderClass("org.keycloak.connections.jpa.JpaConnectionProvider");
+            session.getProvider(c);
+            KeycloakTransaction tx = session.getTransactionManager();
+            ResteasyProviderFactory.pushContext(KeycloakTransaction.class, tx);
+
+            //1. begin
+            tx.begin();
+
+            //2. create savepoint
+            tx.createSavePoint("cockroach_restart");
+
+            while (attempts < maxRetries) {
+                System.out.println("TRIAL" + attempts);
+
+                try {
+                    requestBuffered.getParameterNames();
+                    System.out.println(requestBuffered.getParameter("password"));
+                    //3. execute statements
+                    filterChain.doFilter(requestBuffered, servletResponse);
+                    //filterChain.doFilter(request, servletResponse);
+                    System.out.println("OK");
+//                    ((ResponseErrorWrapper) responseBuffered).flushError();
+                    return;
+                } catch (RuntimeException e) {
+                    //4. retry transaction
+                    // rollback
+                    System.out.println("GOTCHA");
+                    e.printStackTrace();
+                    attempts++;
+                    tx.rollbackToSavePoint("cockroach_restart");
+
+                  //  ((ResponseErrorWrapper) responseBuffered).clearError();
+                    ((BufferedRequestWrapper) requestBuffered).retryRequest();
+                    Thread.yield();
+                }
+
+            }
+
+            //5. release savepoint
+//            try{
+//                System.out.println("Release SavePoint");
+//                tx.releaseSavePoint("cockroach_restart");
+//            }catch(Exception e){
+//                e.printStackTrace();
+//            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }finally{
+
+            System.out.println("Finally");
+
             if (requestBuffered.isAsyncStarted()) {
                 requestBuffered.getAsyncContext().addListener(createAsyncLifeCycleListener(session));
             } else {
                 closeSession(session);
             }
         }
+
+        ////
+//
+//        Class c = session.getProviderClass("org.keycloak.connections.jpa.JpaConnectionProvider");
+//        session.getProvider(c);
+//        KeycloakTransaction tx = session.getTransactionManager();
+//        ResteasyProviderFactory.pushContext(KeycloakTransaction.class, tx);
+//        tx.begin();
+//
+//        try {
+//            requestBuffered.getParameterNames();
+//            System.out.println(requestBuffered.getParameter("password"));
+//            filterChain.doFilter(requestBuffered, servletResponse);
+//        } catch(RuntimeException e){
+//            System.out.println("GOTCHA");
+//        } finally {
+//            if (requestBuffered.isAsyncStarted()) {
+//                requestBuffered.getAsyncContext().addListener(createAsyncLifeCycleListener(session));
+//            } else {
+//                closeSession(session);
+//            }
+//        }
 
     }
 

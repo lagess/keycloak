@@ -38,7 +38,8 @@ public class KeycloakTransactionCommitter implements ContainerResponseFilter {
         KeycloakTransaction tx = ResteasyProviderFactory.getContextData(KeycloakTransaction.class);
         if (tx != null && tx.isActive()) {
             if (tx.getRollbackOnly()) {
-                tx.rollback();
+                tx.rollbackToSavePoint("cockroach_restart");
+                //tx.rollback();
             } else {
                 tx.commit();
             }

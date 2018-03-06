@@ -89,22 +89,15 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
 
     @Override
     public void releaseSavePoint(String savePointId){
-        try {
-            System.out.println("Release savepoint");
-            //TODO Fix SQL concat is Bad for security
-            em.createNativeQuery("RELEASE SAVEPOINT " + savePointId + ";").executeUpdate();
-        }catch(Exception e){
-            e.printStackTrace();
-        }
+        System.out.println("Release savepoint");
+        //TODO Fix SQL concat is Bad for security
+        em.createNativeQuery("RELEASE SAVEPOINT " + savePointId + ";").executeUpdate();
     }
 
     @Override
     public void rollbackToSavePoint(String savePointId){
         //TODO Fix SQL concat is Bad for security
-        try {
-            em.createNativeQuery("ROLLBACK TO SAVEPOINT " + savePointId + ";").executeUpdate();
-        }catch(Exception e){
-            e.printStackTrace();
-        }
+        em.createNativeQuery("ROLLBACK TO SAVEPOINT " + savePointId + ";").executeUpdate();
+
     }
 }

@@ -16,71 +16,51 @@
 package org.keycloak.services.filters;
 
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.IOException;
-
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.IOException;
 
-
-/**
- * HttpServletRequestWrapper that allows a BufferedServletInputStream to be
- * used as part of a given HttpServletRequest.  This delegates all methods
- * to a given HttpServletRequest except for "getInputStream", which
- * returns the instance of BufferedServletInputStream.
+/*
+ * Original Authors: (Special Thanks to...)
+ * http://blog.honestyworks.jp/blog/archives/162   (real original author?)
+ * http://d.hatena.ne.jp/machi_pon/20090120/1232420325
+ * http://ameblo.jp/vashpia77/entry-10826082231.html
  */
 public class BufferedRequestWrapper extends HttpServletRequestWrapper {
 
-    private BufferedServletInputStream inputStream = null;
-    private boolean retryRequest = false;
+   // private byte[] buffer;
+    private BufferedServletInputStream is;
+    private boolean retry = false;
 
     public BufferedRequestWrapper(HttpServletRequest request) throws IOException {
         super(request);
-        inputStream = new BufferedServletInputStream(request.getInputStream());
-    }
 
-    /**
-     * @param request servlet request
-     * @param maxMemoryBuffer Maximum size of request that will be
-     *                        buffered in memory.  Larger requests
-     *                        will be buffered to disk.
-     * @throws IOException
-     */
-    public BufferedRequestWrapper(HttpServletRequest request,
-                                  int maxMemoryBuffer) throws IOException {
-        super(request);
-        inputStream = new BufferedServletInputStream(request.getInputStream(),
-                maxMemoryBuffer);
-    }
-
-    /**
-     * When called, next call to getInputStream() will reset the buffered
-     * inputstream, allowing the request to be re-processed
-     */
-    public void retryRequest() {
-        retryRequest = true;
+        InputStream is = request.getInputStream();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte buff[] = new byte[1024];
+        int read;
+        while((read = is.read(buff)) > 0) {
+            baos.write(buff, 0, read);
+        }
+        byte[] buffer = baos.toByteArray();
+        this.is = new BufferedServletInputStream(buffer);
     }
 
     @Override
     public ServletInputStream getInputStream() throws IOException {
-        if(retryRequest==true) {
-            retryRequest = false;
-            inputStream.resetToBeginning();
+        if(retry){
+            retry = false;
+            is.reset();
         }
-        return inputStream;
+
+        return is;
     }
 
-    @Override
-    public BufferedReader getReader()
-            throws IOException {
-        String encoding = getCharacterEncoding();
-        if (encoding == null)
-            encoding = "UTF-8";
-        InputStreamReader in =
-                new InputStreamReader(getInputStream(), encoding);
-        return new BufferedReader(in);
+    public void retryRequest(){
+        retry = true;
     }
+
 }
-

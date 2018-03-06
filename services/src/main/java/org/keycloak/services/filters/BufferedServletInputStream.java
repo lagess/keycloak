@@ -16,55 +16,27 @@
 package org.keycloak.services.filters;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 
 import javax.servlet.ServletInputStream;
 
-
-/**
- * ServletInputStream implementation that relies on an
- * in-memory buffer or file (for larger requests) to stream content.
- * Useful when needing to consume the servlet input stream multiple
- * times.
+/*
+ * Original Authors: (Special Thanks to...)
+ * http://blog.honestyworks.jp/blog/archives/162   (real original author?)
+ * http://d.hatena.ne.jp/machi_pon/20090120/1232420325
+ * http://ameblo.jp/vashpia77/entry-10826082231.html
  */
 public class BufferedServletInputStream extends ServletInputStream {
 
-    private InputStream is = null;
-    private BufferedContent content = null;
+    private ByteArrayInputStream is;
 
-    public BufferedServletInputStream(InputStream is) throws IOException {
-        createBuffer(is);
-    }
-
-    /**
-     * @param is InputStream to buffer
-     * @param maxMemoryBuffer Maximum size of stream to buffer into memory.
-     *                        InputStreams that exceed this will be buffered
-     *                        into a temp file.
-     * @throws IOException
-     */
-    public BufferedServletInputStream(InputStream is, int maxMemoryBuffer) throws IOException {
-        createBuffer(is, maxMemoryBuffer);
+    public BufferedServletInputStream(byte[] buffer) {
+        this.is = new ByteArrayInputStream(buffer);
     }
 
     @Override
     public int available() throws IOException {
         return is.available();
-    }
-
-    @Override
-    public void close() throws IOException {
-        is.close();
-    }
-
-    @Override
-    public synchronized void mark(int readlimit) {
-        is.mark(readlimit);
-    }
-
-    @Override
-    public boolean markSupported() {
-        return is.markSupported();
     }
 
     @Override
@@ -78,45 +50,8 @@ public class BufferedServletInputStream extends ServletInputStream {
     }
 
     @Override
-    public int read(byte[] b) throws IOException {
-        return is.read(b);
-    }
-
-    @Override
-    public synchronized void reset() throws IOException {
+    public void reset() throws IOException {
         is.reset();
     }
-
-    @Override
-    public long skip(long n) throws IOException {
-        return is.skip(n);
-    }
-
-    /**
-     * Reset the input stream, allowing it to be re-processed.
-     * @throws IOException
-     */
-    public synchronized void resetToBeginning() throws IOException {
-        is.close();
-        is = content.getInputStream();
-    }
-
-    /**
-     * @return length of buffered content
-     */
-    public long getLength() {
-        return content.getLength();
-    }
-
-    private void createBuffer(InputStream is) throws IOException {
-        content = new BufferedContent(is);
-        this.is = content.getInputStream();
-    }
-
-    private void createBuffer(InputStream is, int maxMemoryBuffer) throws IOException {
-        content = new BufferedContent(is, maxMemoryBuffer);
-        this.is = content.getInputStream();
-    }
-
 }
 

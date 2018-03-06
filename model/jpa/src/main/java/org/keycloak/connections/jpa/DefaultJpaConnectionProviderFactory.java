@@ -168,6 +168,8 @@ public class DefaultJpaConnectionProviderFactory implements JpaConnectionProvide
 
                         properties.put("hibernate.show_sql", config.getBoolean("showSql", false));
                         properties.put("hibernate.format_sql", config.getBoolean("formatSql", true));
+                        System.out.println(CockroachDbTransactionCoordinatorBuilder.class.getName());
+                        properties.put("hibernate.transaction.coordinator_class", CockroachDbTransactionCoordinatorBuilder.class.getName());
 
                         Connection connection = getConnection();
                         try {
