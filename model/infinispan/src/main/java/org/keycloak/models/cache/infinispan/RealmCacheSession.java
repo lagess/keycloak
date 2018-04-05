@@ -306,6 +306,21 @@ public class RealmCacheSession implements CacheRealmProvider {
             public boolean isActive() {
                 return transactionActive;
             }
+
+            @Override
+            public void createSavePoint() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void releaseSavePoint() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void rollbackToSavePoint() {
+                throw new UnsupportedOperationException();
+            }
         };
     }
 
@@ -354,6 +369,21 @@ public class RealmCacheSession implements CacheRealmProvider {
             @Override
             public boolean isActive() {
                 return transactionActive;
+            }
+
+            @Override
+            public void createSavePoint() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void releaseSavePoint() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void rollbackToSavePoint() {
+                throw new UnsupportedOperationException();
             }
         };
     }

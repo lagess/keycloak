@@ -76,6 +76,21 @@ public class InfinispanKeycloakTransaction implements KeycloakTransaction {
         return active;
     }
 
+    @Override
+    public void createSavePoint() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void releaseSavePoint() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void rollbackToSavePoint() {
+        throw new UnsupportedOperationException();
+    }
+
     public <K, V> void put(Cache<K, V> cache, K key, V value) {
         log.tracev("Adding cache operation: {0} on {1}", CacheOperation.ADD, key);
 

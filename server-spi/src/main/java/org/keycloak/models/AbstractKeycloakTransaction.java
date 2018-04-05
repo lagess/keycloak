@@ -76,6 +76,21 @@ public abstract class AbstractKeycloakTransaction implements KeycloakTransaction
         return state == TransactionState.STARTED || state == TransactionState.ROLLBACK_ONLY;
     }
 
+    @Override
+    public void createSavePoint() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void releaseSavePoint() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void rollbackToSavePoint() {
+        throw new UnsupportedOperationException();
+    }
+
     public TransactionState getState() {
         return state;
     }

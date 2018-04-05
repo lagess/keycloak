@@ -222,4 +222,27 @@ public class DefaultKeycloakTransactionManager implements KeycloakTransactionMan
         return active;
     }
 
+    @Override
+    public void createSavePoint() {
+        for (KeycloakTransaction tx : transactions) {
+            tx.createSavePoint();
+        }
+
+    }
+
+    @Override
+    public void releaseSavePoint() {
+        for (KeycloakTransaction tx : transactions) {
+            tx.releaseSavePoint();
+        }
+
+    }
+
+    @Override
+    public void rollbackToSavePoint() {
+        for (KeycloakTransaction tx : transactions) {
+            tx.rollbackToSavePoint();
+        }
+
+    }
 }

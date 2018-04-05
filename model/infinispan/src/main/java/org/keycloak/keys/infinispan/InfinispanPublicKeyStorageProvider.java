@@ -112,6 +112,21 @@ public class InfinispanPublicKeyStorageProvider implements PublicKeyStorageProvi
             public boolean isActive() {
                 return true;
             }
+
+            @Override
+            public void createSavePoint() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void releaseSavePoint() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void rollbackToSavePoint() {
+                throw new UnsupportedOperationException();
+            }
         };
     }
 

@@ -72,4 +72,20 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
     public boolean isActive() {
         return em.getTransaction().isActive();
     }
+
+
+    @Override
+    public void createSavePoint() {
+        em.createNativeQuery("SAVEPOINT cockroach_restart;").executeUpdate();
+    }
+
+    @Override
+    public void releaseSavePoint() {
+        em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart;").executeUpdate();
+    }
+
+    @Override
+    public void rollbackToSavePoint() {
+        em.createNativeQuery("ROLLBACK TO SAVEPOINT cockroach_restart;").executeUpdate();
+    }
 }
