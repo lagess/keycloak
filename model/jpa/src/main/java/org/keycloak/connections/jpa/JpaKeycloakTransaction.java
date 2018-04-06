@@ -81,7 +81,7 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
 
     @Override
     public void releaseSavePoint() {
-        em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart;").executeUpdate();
+        em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart;COMMIT;").executeUpdate();
     }
 
     @Override

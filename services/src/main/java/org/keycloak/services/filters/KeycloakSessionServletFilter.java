@@ -22,6 +22,8 @@ import org.keycloak.common.ClientConnection;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.KeycloakTransaction;
+import org.keycloak.services.util.BufferedRequestWrapper;
+import org.keycloak.services.util.BufferedServletInputStream;
 
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
@@ -32,6 +34,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 import java.io.IOException;
 
 /**
@@ -44,7 +47,7 @@ public class KeycloakSessionServletFilter implements Filter {
     public void init(FilterConfig filterConfig) throws ServletException {
     }
 
-    @Override
+    /*@Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         servletRequest.setCharacterEncoding("UTF-8");
 
@@ -95,6 +98,116 @@ public class KeycloakSessionServletFilter implements Filter {
                 closeSession(session);
             }
         }
+    }*/
+
+
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        servletRequest.setCharacterEncoding("UTF-8");
+
+        // WARNING: This line is really important !!!
+        // By a side effect, the query parameters disappears if not called... To investigate.
+        servletRequest.getParameterNames();
+
+        final HttpServletRequest requestBuffered = new BufferedRequestWrapper((HttpServletRequest) servletRequest);
+       // final HttpServletResponse responseBuffered = new ResponseErrorWrapper((HttpServletResponse) servletResponse);
+
+        KeycloakSessionFactory sessionFactory = (KeycloakSessionFactory) requestBuffered.getServletContext().getAttribute(KeycloakSessionFactory.class.getName());
+        KeycloakSession session = sessionFactory.create();
+        ResteasyProviderFactory.pushContext(KeycloakSession.class, session);
+        ClientConnection connection = new ClientConnection() {
+            @Override
+            public String getRemoteAddr() {
+                return requestBuffered.getRemoteAddr();
+            }
+
+            @Override
+            public String getRemoteHost() {
+                return requestBuffered.getRemoteHost();
+            }
+
+            @Override
+            public int getRemotePort() {
+                return requestBuffered.getRemotePort();
+            }
+
+            @Override
+            public String getLocalAddr() {
+                return requestBuffered.getLocalAddr();
+            }
+
+            @Override
+            public int getLocalPort() {
+                return requestBuffered.getLocalPort();
+            }
+        };
+        session.getContext().setConnection(connection);
+        ResteasyProviderFactory.pushContext(ClientConnection.class, connection);
+
+        //--- BEGIN CHANGES ---
+       // final HttpServletRequest requestBuffered = new BufferedRequestWrapper((HttpServletRequest) request, 1024*256);
+        //final HttpServletResponse responseBuffered = new ResponseErrorWrapper((HttpServletResponse) servletResponse);
+
+        int attempts = 0;
+        int maxRetries = 1;
+
+        try {
+            Class c = session.getProviderClass("org.keycloak.connections.jpa.JpaConnectionProvider");
+            session.getProvider(c);
+            KeycloakTransaction tx = session.getTransactionManager();
+            ResteasyProviderFactory.pushContext(KeycloakTransaction.class, tx);
+
+            //1. begin
+            tx.begin();
+
+            //2. create savepoint
+            tx.createSavePoint();
+
+            while (attempts < maxRetries) {
+                System.out.println("TRIAL" + attempts);
+
+                try {
+                    //3. execute statements
+                     filterChain.doFilter(requestBuffered, servletResponse);
+                    //filterChain.doFilter(request, servletResponse);
+                    System.out.println("OK");
+                    //((ResponseErrorWrapper) responseBuffered).flushError();
+                    return;
+                } catch (RuntimeException e) {
+                    //4. retry transaction
+                    // rollback
+                    System.out.println("GOTCHA");
+                    e.printStackTrace();
+                    attempts++;
+                    //tx.rollbackToSavePoint("cockroach_restart");
+
+                    //((ResponseErrorWrapper) responseBuffered).clearError();
+                    ((BufferedRequestWrapper) requestBuffered).retryRequest();
+                    Thread.yield();
+                }
+
+            }
+
+            //5. release savepoint
+            //  try{
+            //      System.out.println("Release SavePoint");
+            //     tx.releaseSavePoint("cockroach_restart");
+            //  }catch(Exception e){
+            //      e.printStackTrace();
+            //  }
+        }catch(Exception e){
+            e.printStackTrace();
+        }finally{
+
+            System.out.println("Finally");
+
+            if (requestBuffered.isAsyncStarted()) {
+                requestBuffered.getAsyncContext().addListener(createAsyncLifeCycleListener(session));
+            } else {
+                closeSession(session);
+            }
+        }
+
     }
 
     private AsyncListener createAsyncLifeCycleListener(final KeycloakSession session) {
