@@ -48,6 +48,11 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
             logger.trace("Committing transaction");
             em.getTransaction().commit();
         } catch (PersistenceException e) {
+            if (e.getCause().getMessage().contains("Retry")){
+                throw new RuntimeException("RetryableException", e);
+
+            }
+
             throw PersistenceExceptionConverter.convert(e.getCause() != null ? e.getCause() : e);
         }
     }

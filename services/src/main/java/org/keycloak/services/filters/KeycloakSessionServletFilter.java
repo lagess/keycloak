@@ -149,7 +149,7 @@ public class KeycloakSessionServletFilter implements Filter {
         //final HttpServletResponse responseBuffered = new ResponseErrorWrapper((HttpServletResponse) servletResponse);
 
         int attempts = 0;
-        int maxRetries = 1;
+        int maxRetries = 3;
 
         try {
             Class c = session.getProviderClass("org.keycloak.connections.jpa.JpaConnectionProvider");
@@ -164,6 +164,9 @@ public class KeycloakSessionServletFilter implements Filter {
             tx.createSavePoint();
 
             while (attempts < maxRetries) {
+                ResteasyProviderFactory.pushContext(KeycloakSession.class, session);
+                ResteasyProviderFactory.pushContext(ClientConnection.class, connection);
+                ResteasyProviderFactory.pushContext(KeycloakTransaction.class, tx);
                 System.out.println("TRIAL" + attempts);
 
                 try {
@@ -176,10 +179,11 @@ public class KeycloakSessionServletFilter implements Filter {
                 } catch (RuntimeException e) {
                     //4. retry transaction
                     // rollback
-                    System.out.println("GOTCHA");
+                    System.out.println("GOTCHA"+ attempts);
                     e.printStackTrace();
                     attempts++;
-                    //tx.rollbackToSavePoint("cockroach_restart");
+                    tx.rollbackToSavePoint();
+
 
                     //((ResponseErrorWrapper) responseBuffered).clearError();
                     ((BufferedRequestWrapper) requestBuffered).retryRequest();

@@ -56,14 +56,15 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
 
     @Override
     public Response toResponse(Throwable throwable) {
-        KeycloakTransaction tx = ResteasyProviderFactory.getContextData(KeycloakTransaction.class);
-        tx.setRollbackOnly();
-
         int statusCode = getStatusCode(throwable);
 
         if (statusCode >= 500 && statusCode <= 599) {
             logger.error("Uncaught server error", throwable);
+            throw new RuntimeException(throwable);
         }
+
+        KeycloakTransaction tx = ResteasyProviderFactory.getContextData(KeycloakTransaction.class);
+        tx.setRollbackOnly();
 
         if (!MediaTypeMatcher.isHtmlRequest(headers)) {
             return Response.status(statusCode).build();

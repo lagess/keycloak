@@ -91,6 +91,7 @@ public abstract class AbstractKeycloakTransaction implements KeycloakTransaction
         throw new UnsupportedOperationException();
     }
 
+
     public TransactionState getState() {
         return state;
     }
