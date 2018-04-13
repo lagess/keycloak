@@ -140,8 +140,8 @@ public class StoreFactoryCacheSession implements CachedStoreFactoryProvider {
 
             @Override
             public void rollback() {
-                setRollbackOnly = true;
-                transactionActive = false;
+                setRollbackOnly = false;
+                transactionActive = true;
             }
 
             @Override
@@ -186,9 +186,9 @@ public class StoreFactoryCacheSession implements CachedStoreFactoryProvider {
             @Override
             public void rollback() {
                 try {
-                    setRollbackOnly = true;
                     runInvalidations();
-                    transactionActive = false;
+                    setRollbackOnly = false;
+                    transactionActive = true;
                 } finally {
                     cache.endRevisionBatch();
                 }
