@@ -151,9 +151,9 @@ public class UserCacheSession implements UserCache {
 
             @Override
             public void rollback() {
-                setRollbackOnly = true;
                 runInvalidations();
-                transactionActive = false;
+                setRollbackOnly = false;
+                transactionActive = true;
             }
 
             @Override

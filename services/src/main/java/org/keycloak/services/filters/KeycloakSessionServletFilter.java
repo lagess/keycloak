@@ -150,7 +150,7 @@ public class KeycloakSessionServletFilter implements Filter {
         //final HttpServletResponse responseBuffered = new ResponseErrorWrapper((HttpServletResponse) servletResponse);
 
         int attempts = 0;
-        int maxRetries = 3;
+        int maxRetries = 10;
 
         try {
             Class c = session.getProviderClass("org.keycloak.connections.jpa.JpaConnectionProvider");
