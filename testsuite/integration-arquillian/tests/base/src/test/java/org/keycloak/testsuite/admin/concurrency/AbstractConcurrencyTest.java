@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class AbstractConcurrencyTest extends AbstractTestRealmKeycloakTest {
 
-    private static final int DEFAULT_THREADS = 2;
+    private static final int DEFAULT_THREADS = 1;
     private static final int DEFAULT_NUMBER_OF_EXECUTIONS = 1 * DEFAULT_THREADS;
 
     public static final String REALM_NAME = "test";

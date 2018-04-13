@@ -28,8 +28,4 @@ public interface KeycloakTransaction {
     void setRollbackOnly();
     boolean getRollbackOnly();
     boolean isActive();
-
-    void createSavePoint();
-    void releaseSavePoint();
-    void rollbackToSavePoint();
 }

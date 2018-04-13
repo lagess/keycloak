@@ -160,17 +160,19 @@ public class DefaultKeycloakTransactionManager implements KeycloakTransactionMan
 
         active = false;
         if (exception != null) {
+            completed = false; //ADDED
+            active = true;
             throw exception;
         }
     }
 
     @Override
     public void rollback() {
-        if (completed) {
+       /* if (completed) {
             return;
         } else {
             completed = true;
-        }
+        }*/
 
         RuntimeException exception = null;
         rollback(exception);
@@ -191,7 +193,7 @@ public class DefaultKeycloakTransactionManager implements KeycloakTransactionMan
                 exception = exception != null ? e : exception;
             }
         }
-        active = false;
+        //active = false;
         if (exception != null) {
             throw exception;
         }
@@ -222,27 +224,4 @@ public class DefaultKeycloakTransactionManager implements KeycloakTransactionMan
         return active;
     }
 
-    @Override
-    public void createSavePoint() {
-        for (KeycloakTransaction tx : transactions) {
-            tx.createSavePoint();
-        }
-
-    }
-
-    @Override
-    public void releaseSavePoint() {
-        for (KeycloakTransaction tx : transactions) {
-            tx.releaseSavePoint();
-        }
-
-    }
-
-    @Override
-    public void rollbackToSavePoint() {
-        for (KeycloakTransaction tx : transactions) {
-            tx.rollbackToSavePoint();
-        }
-
-    }
 }

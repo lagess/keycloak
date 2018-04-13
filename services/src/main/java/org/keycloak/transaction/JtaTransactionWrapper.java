@@ -139,20 +139,6 @@ public class JtaTransactionWrapper implements KeycloakTransaction {
         return false;
     }
 
-    @Override
-    public void createSavePoint() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void releaseSavePoint() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void rollbackToSavePoint() {
-        throw new UnsupportedOperationException();
-    }
 
     /*
 

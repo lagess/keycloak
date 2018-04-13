@@ -33,6 +33,8 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
 
     protected EntityManager em;
 
+    private boolean rollback;
+
     public JpaKeycloakTransaction(EntityManager em) {
         this.em = em;
     }
@@ -40,18 +42,20 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
     @Override
     public void begin() {
         em.getTransaction().begin();
+        em.createNativeQuery("SAVEPOINT cockroach_restart;").executeUpdate();
     }
 
     @Override
     public void commit() {
         try {
             logger.trace("Committing transaction");
-            em.getTransaction().commit();
+            em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart; COMMIT;").executeUpdate();
+            //em.getTransaction().commit();
         } catch (PersistenceException e) {
-            if (e.getCause().getMessage().contains("Retry")){
+           /* if (e.getCause().getMessage().contains("Retry")){
                 throw new RuntimeException("RetryableException", e);
 
-            }
+            }*/
 
             throw PersistenceExceptionConverter.convert(e.getCause() != null ? e.getCause() : e);
         }
@@ -60,17 +64,22 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
     @Override
     public void rollback() {
         logger.trace("Rollback transaction");
-        em.getTransaction().rollback();
+        em.createNativeQuery("ROLLBACK TO SAVEPOINT cockroach_restart;").executeUpdate();
+       // em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart;").executeUpdate();
+        System.out.println("ROLL-BACK");
+       // em.getTransaction().rollback();
+        rollback = false;
     }
 
     @Override
     public void setRollbackOnly() {
-        em.getTransaction().setRollbackOnly();
+        rollback = true;
+        //em.getTransaction().setRollbackOnly();
     }
 
     @Override
     public boolean getRollbackOnly() {
-        return  em.getTransaction().getRollbackOnly();
+        return  rollback;
     }
 
     @Override
@@ -78,19 +87,4 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
         return em.getTransaction().isActive();
     }
 
-
-    @Override
-    public void createSavePoint() {
-        em.createNativeQuery("SAVEPOINT cockroach_restart;").executeUpdate();
-    }
-
-    @Override
-    public void releaseSavePoint() {
-        em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart;COMMIT;").executeUpdate();
-    }
-
-    @Override
-    public void rollbackToSavePoint() {
-        em.createNativeQuery("ROLLBACK TO SAVEPOINT cockroach_restart;").executeUpdate();
-    }
 }

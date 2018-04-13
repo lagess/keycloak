@@ -159,20 +159,6 @@ public class StoreFactoryCacheSession implements CachedStoreFactoryProvider {
                 return transactionActive;
             }
 
-            @Override
-            public void createSavePoint() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void releaseSavePoint() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void rollbackToSavePoint() {
-                throw new UnsupportedOperationException();
-            }
         };
     }
 
@@ -223,20 +209,6 @@ public class StoreFactoryCacheSession implements CachedStoreFactoryProvider {
                 return transactionActive;
             }
 
-            @Override
-            public void createSavePoint() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void releaseSavePoint() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void rollbackToSavePoint() {
-                throw new UnsupportedOperationException();
-            }
         };
     }
 

@@ -16,12 +16,12 @@
 package org.keycloak.services.util;
 
 
-        import javax.servlet.ServletInputStream;
-        import javax.servlet.http.HttpServletRequest;
-        import javax.servlet.http.HttpServletRequestWrapper;
-        import java.io.ByteArrayOutputStream;
-        import java.io.InputStream;
-        import java.io.IOException;
+import javax.servlet.ServletInputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.IOException;
 
 /*
  * Original Authors: (Special Thanks to...)

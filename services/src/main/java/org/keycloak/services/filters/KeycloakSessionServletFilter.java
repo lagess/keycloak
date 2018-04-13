@@ -23,7 +23,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.KeycloakTransaction;
 import org.keycloak.services.util.BufferedRequestWrapper;
-import org.keycloak.services.util.BufferedServletInputStream;
+import org.keycloak.services.util.ResponseErrorWrapper;
 
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
@@ -34,6 +34,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletRequestWrapper;
 import java.io.IOException;
 
@@ -110,7 +111,7 @@ public class KeycloakSessionServletFilter implements Filter {
         servletRequest.getParameterNames();
 
         final HttpServletRequest requestBuffered = new BufferedRequestWrapper((HttpServletRequest) servletRequest);
-       // final HttpServletResponse responseBuffered = new ResponseErrorWrapper((HttpServletResponse) servletResponse);
+        final HttpServletResponse responseBuffered = new ResponseErrorWrapper((HttpServletResponse) servletResponse);
 
         KeycloakSessionFactory sessionFactory = (KeycloakSessionFactory) requestBuffered.getServletContext().getAttribute(KeycloakSessionFactory.class.getName());
         KeycloakSession session = sessionFactory.create();
@@ -160,8 +161,6 @@ public class KeycloakSessionServletFilter implements Filter {
             //1. begin
             tx.begin();
 
-            //2. create savepoint
-            tx.createSavePoint();
 
             while (attempts < maxRetries) {
                 ResteasyProviderFactory.pushContext(KeycloakSession.class, session);
@@ -171,21 +170,20 @@ public class KeycloakSessionServletFilter implements Filter {
 
                 try {
                     //3. execute statements
-                     filterChain.doFilter(requestBuffered, servletResponse);
+                     filterChain.doFilter(requestBuffered, responseBuffered);
                     //filterChain.doFilter(request, servletResponse);
                     System.out.println("OK");
-                    //((ResponseErrorWrapper) responseBuffered).flushError();
+                    ((ResponseErrorWrapper) responseBuffered).flushError();
                     return;
                 } catch (RuntimeException e) {
                     //4. retry transaction
                     // rollback
                     System.out.println("GOTCHA"+ attempts);
-                    e.printStackTrace();
                     attempts++;
-                    tx.rollbackToSavePoint();
+                    tx.rollback();
 
 
-                    //((ResponseErrorWrapper) responseBuffered).clearError();
+                    ((ResponseErrorWrapper) responseBuffered).clearError();
                     ((BufferedRequestWrapper) requestBuffered).retryRequest();
                     Thread.yield();
                 }

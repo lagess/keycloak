@@ -186,7 +186,7 @@ public class ConcurrencyTest extends AbstractConcurrencyTest {
             Response response = realm.groups().add(c);
             String id = ApiUtil.getCreatedId(response);
             response.close();
-
+            System.out.println(id);
             c = realm.groups().group(id).toRepresentation();
             assertNotNull(c);
             assertTrue("Group " + name + " not found in group list",

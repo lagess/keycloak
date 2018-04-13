@@ -37,13 +37,21 @@ public class KeycloakTransactionCommitter implements ContainerResponseFilter {
     public void filter(ContainerRequestContext containerRequestContext, ContainerResponseContext containerResponseContext) throws IOException {
         KeycloakTransaction tx = ResteasyProviderFactory.getContextData(KeycloakTransaction.class);
         if (tx != null && tx.isActive()) {
-            if (tx.getRollbackOnly()) {
-                tx.rollbackToSavePoint();
-                //tx.rollback();
-            } else {
-                tx.releaseSavePoint();
-                tx.commit();
+            try {
+                if (tx.getRollbackOnly()) {
+                    tx.rollback();
+                    System.out.println("ROLLBACKED");
+                } else {
+                    tx.commit();
+                    System.out.println("COMMITTED");
+                }
+            }catch(Exception e ){
+                System.out.println("Errror in COMITTER Filter");
+                e.printStackTrace();
+                throw e;
             }
+        }else{
+            System.out.println("***********************Tx inactive !!!!!!!!!!!!!!!");
         }
     }
 

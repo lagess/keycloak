@@ -288,8 +288,8 @@ public class RealmCacheSession implements CacheRealmProvider {
 
             @Override
             public void rollback() {
-                setRollbackOnly = true;
-                transactionActive = false;
+                setRollbackOnly = false;
+                transactionActive = true;
             }
 
             @Override
@@ -307,20 +307,7 @@ public class RealmCacheSession implements CacheRealmProvider {
                 return transactionActive;
             }
 
-            @Override
-            public void createSavePoint() {
-                throw new UnsupportedOperationException();
-            }
 
-            @Override
-            public void releaseSavePoint() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void rollbackToSavePoint() {
-                throw new UnsupportedOperationException();
-            }
         };
     }
 
@@ -348,9 +335,9 @@ public class RealmCacheSession implements CacheRealmProvider {
             @Override
             public void rollback() {
                 try {
-                    setRollbackOnly = true;
                     runInvalidations();
-                    transactionActive = false;
+                    setRollbackOnly = false;
+                    transactionActive = true;
                 } finally {
                     cache.endRevisionBatch();
                 }
@@ -371,20 +358,6 @@ public class RealmCacheSession implements CacheRealmProvider {
                 return transactionActive;
             }
 
-            @Override
-            public void createSavePoint() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void releaseSavePoint() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public void rollbackToSavePoint() {
-                throw new UnsupportedOperationException();
-            }
         };
     }
 

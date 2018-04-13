@@ -87,18 +87,4 @@ public class UserTransactionWrapper implements KeycloakTransaction {
         }
     }
 
-    @Override
-    public void createSavePoint() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void releaseSavePoint() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void rollbackToSavePoint() {
-        throw new UnsupportedOperationException();
-    }
 }
