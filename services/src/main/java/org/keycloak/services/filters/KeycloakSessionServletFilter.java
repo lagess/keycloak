@@ -166,13 +166,11 @@ public class KeycloakSessionServletFilter implements Filter {
                 ResteasyProviderFactory.pushContext(KeycloakSession.class, session);
                 ResteasyProviderFactory.pushContext(ClientConnection.class, connection);
                 ResteasyProviderFactory.pushContext(KeycloakTransaction.class, tx);
-                System.out.println("TRIAL" + attempts);
 
                 try {
                     //3. execute statements
                      filterChain.doFilter(requestBuffered, responseBuffered);
                     //filterChain.doFilter(request, servletResponse);
-                    System.out.println("OK");
                     ((ResponseErrorWrapper) responseBuffered).flushError();
                     return;
                 } catch (RuntimeException e) {
@@ -190,18 +188,9 @@ public class KeycloakSessionServletFilter implements Filter {
 
             }
 
-            //5. release savepoint
-            //  try{
-            //      System.out.println("Release SavePoint");
-            //     tx.releaseSavePoint("cockroach_restart");
-            //  }catch(Exception e){
-            //      e.printStackTrace();
-            //  }
         }catch(Exception e){
             e.printStackTrace();
         }finally{
-
-            System.out.println("Finally");
 
             if (requestBuffered.isAsyncStarted()) {
                 requestBuffered.getAsyncContext().addListener(createAsyncLifeCycleListener(session));

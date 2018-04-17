@@ -87,4 +87,9 @@ public class UserTransactionWrapper implements KeycloakTransaction {
         }
     }
 
+    @Override
+    public void releaseSavePoint() {
+        // Nothing to do, specific to CockroachDB
+    }
+
 }

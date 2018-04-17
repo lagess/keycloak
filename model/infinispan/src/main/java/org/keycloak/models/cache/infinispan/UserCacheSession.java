@@ -171,6 +171,11 @@ public class UserCacheSession implements UserCache {
                 return transactionActive;
             }
 
+            @Override
+            public void releaseSavePoint() {
+                // Nothing to do, specific to CockroachDB
+            }
+
         };
     }
 

@@ -40,10 +40,8 @@ public class KeycloakTransactionCommitter implements ContainerResponseFilter {
             try {
                 if (tx.getRollbackOnly()) {
                     tx.rollback();
-                    System.out.println("ROLLBACKED");
                 } else {
                     tx.commit();
-                    System.out.println("COMMITTED");
                 }
             }catch(Exception e ){
                 System.out.println("Errror in COMITTER Filter");

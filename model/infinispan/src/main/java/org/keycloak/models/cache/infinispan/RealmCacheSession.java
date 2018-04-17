@@ -307,7 +307,10 @@ public class RealmCacheSession implements CacheRealmProvider {
                 return transactionActive;
             }
 
-
+            @Override
+            public void releaseSavePoint() {
+                // Nothing to do, specific to CockroachDB
+            }
         };
     }
 
@@ -356,6 +359,11 @@ public class RealmCacheSession implements CacheRealmProvider {
             @Override
             public boolean isActive() {
                 return transactionActive;
+            }
+
+            @Override
+            public void releaseSavePoint() {
+                // Nothing to do, specific to CockroachDB
             }
 
         };

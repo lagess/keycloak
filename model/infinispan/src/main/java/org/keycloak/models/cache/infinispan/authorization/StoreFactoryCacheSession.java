@@ -159,6 +159,11 @@ public class StoreFactoryCacheSession implements CachedStoreFactoryProvider {
                 return transactionActive;
             }
 
+            @Override
+            public void releaseSavePoint() {
+                // Nothing to do, specific to CockroachDB
+            }
+
         };
     }
 
@@ -207,6 +212,11 @@ public class StoreFactoryCacheSession implements CachedStoreFactoryProvider {
             @Override
             public boolean isActive() {
                 return transactionActive;
+            }
+
+            @Override
+            public void releaseSavePoint() {
+                // Nothing to do, specific to CockroachDB
             }
 
         };

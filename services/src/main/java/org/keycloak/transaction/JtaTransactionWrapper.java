@@ -139,6 +139,10 @@ public class JtaTransactionWrapper implements KeycloakTransaction {
         return false;
     }
 
+    @Override
+    public void releaseSavePoint() {
+        // Nothing to do, specific to CockroachDB
+    }
 
     /*
 

@@ -113,6 +113,11 @@ public class InfinispanPublicKeyStorageProvider implements PublicKeyStorageProvi
                 return true;
             }
 
+            @Override
+            public void releaseSavePoint() {
+                // Nothing to do, specific to CockroachDB
+            }
+
         };
     }
 

@@ -226,4 +226,10 @@ public class DefaultKeycloakTransactionManager implements KeycloakTransactionMan
         return active;
     }
 
+    public void releaseSavePoint(){
+        for (KeycloakTransaction tx : transactions) {
+            tx.releaseSavePoint();
+        }
+    }
+
 }

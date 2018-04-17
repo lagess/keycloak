@@ -76,6 +76,11 @@ public abstract class AbstractKeycloakTransaction implements KeycloakTransaction
         return state == TransactionState.STARTED || state == TransactionState.ROLLBACK_ONLY;
     }
 
+    @Override
+    public void releaseSavePoint() {
+        // Nothing to do, specific to CockroachDB
+    }
+
     public TransactionState getState() {
         return state;
     }

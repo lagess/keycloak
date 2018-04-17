@@ -59,7 +59,9 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
     @Override
     public void rollback() {
         logger.trace("Rollback transaction");
+        em.flush();
         em.createNativeQuery("ROLLBACK TO SAVEPOINT cockroach_restart;").executeUpdate();
+
         rollback = false;
     }
 
@@ -76,6 +78,13 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
     @Override
     public boolean isActive() {
         return em.getTransaction().isActive();
+    }
+
+    @Override
+    public void releaseSavePoint() {
+        logger.trace("Release SavePoint");
+        em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart; COMMIT;").executeUpdate();
+
     }
 
 }
