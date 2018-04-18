@@ -60,7 +60,7 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
 
         if (statusCode >= 500 && statusCode <= 599) {
             logger.error("Uncaught server error", throwable);
-            throw new RuntimeException(throwable);
+            throw new RetryableTransactionException(throwable);
         }
 
         KeycloakTransaction tx = ResteasyProviderFactory.getContextData(KeycloakTransaction.class);

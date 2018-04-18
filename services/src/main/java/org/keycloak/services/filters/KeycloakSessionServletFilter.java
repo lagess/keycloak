@@ -22,6 +22,7 @@ import org.keycloak.common.ClientConnection;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.KeycloakTransaction;
+import org.keycloak.services.error.RetryableTransactionException;
 import org.keycloak.services.util.BufferedRequestWrapper;
 import org.keycloak.services.util.ResponseErrorWrapper;
 
@@ -173,7 +174,7 @@ public class KeycloakSessionServletFilter implements Filter {
                     //filterChain.doFilter(request, servletResponse);
                     ((ResponseErrorWrapper) responseBuffered).flushError();
                     return;
-                } catch (RuntimeException e) {
+                } catch (RetryableTransactionException e) {
                     //4. retry transaction
                     // rollback
                     System.out.println("GOTCHA"+ attempts);

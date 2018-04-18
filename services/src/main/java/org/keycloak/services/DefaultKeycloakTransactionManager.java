@@ -20,6 +20,7 @@ import org.jboss.logging.Logger;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakTransaction;
 import org.keycloak.models.KeycloakTransactionManager;
+import org.keycloak.services.error.RetryableTransactionException;
 import org.keycloak.transaction.JtaTransactionManagerLookup;
 import org.keycloak.transaction.JtaTransactionWrapper;
 
@@ -159,9 +160,13 @@ public class DefaultKeycloakTransactionManager implements KeycloakTransactionMan
         }
 
         active = false;
+
         if (exception != null) {
-            completed = false; //ADDED
-            active = true;
+
+            if (exception instanceof RetryableTransactionException){
+                completed = false; //ADDED
+                active = true;
+            }
             throw exception;
         }
     }

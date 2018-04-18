@@ -17,8 +17,10 @@
 
 package org.keycloak.connections.jpa;
 
+import org.hibernate.exception.LockAcquisitionException;
 import org.jboss.logging.Logger;
 import org.keycloak.models.KeycloakTransaction;
+import org.keycloak.services.error.RetryableTransactionException;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
@@ -33,7 +35,9 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
 
     protected EntityManager em;
 
-    private boolean rollback;
+    private boolean ignoreRollbackOnly = false;
+
+    //private boolean savepointToRelease = false;
 
     public JpaKeycloakTransaction(EntityManager em) {
         this.em = em;
@@ -43,15 +47,26 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
     public void begin() {
         em.getTransaction().begin();
         em.createNativeQuery("SAVEPOINT cockroach_restart;").executeUpdate();
+      //  savepointToRelease = true;
     }
 
     @Override
     public void commit() {
+      /*  if (!savepointToRelease) {
+            return;
+        }*/
+
+
         try {
             logger.trace("Committing transaction");
             em.flush();
             em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart; COMMIT;").executeUpdate();
+        //    savepointToRelease = false;
         } catch (PersistenceException e) {
+            if (e.getCause() instanceof LockAcquisitionException){
+                ignoreRollbackOnly = true;
+                throw new RetryableTransactionException(e);
+            }
             throw PersistenceExceptionConverter.convert(e.getCause() != null ? e.getCause() : e);
         }
     }
@@ -61,18 +76,21 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
         logger.trace("Rollback transaction");
         em.flush();
         em.createNativeQuery("ROLLBACK TO SAVEPOINT cockroach_restart;").executeUpdate();
-
-        rollback = false;
     }
 
     @Override
     public void setRollbackOnly() {
-        rollback = true;
+        em.getTransaction().setRollbackOnly();
     }
 
     @Override
     public boolean getRollbackOnly() {
-        return  rollback;
+        if (ignoreRollbackOnly){
+            return false;
+        }else{
+            return  em.getTransaction().getRollbackOnly();
+        }
+
     }
 
     @Override
@@ -82,9 +100,13 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
 
     @Override
     public void releaseSavePoint() {
-        logger.trace("Release SavePoint");
-        em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart; COMMIT;").executeUpdate();
-
+        try {
+            logger.trace("Release SavePoint");
+            em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart; COMMIT;").executeUpdate();
+            //    savepointToRelease = false;
+        }catch(PersistenceException e){
+            System.out.println("Exception swallowed for release SavePt"+ e.getMessage());
+        }
     }
 
 }

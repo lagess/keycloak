@@ -18,6 +18,7 @@
 package org.keycloak.testsuite.admin.client;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.keycloak.admin.client.resource.ClientTemplatesResource;
 import org.keycloak.admin.client.resource.ProtocolMappersResource;
