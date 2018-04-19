@@ -109,9 +109,12 @@ public class KeycloakSessionServletFilter implements Filter {
 
         // WARNING: This line is really important !!!
         // By a side effect, the query parameters disappears if not called... To investigate.
-        servletRequest.getParameterNames();
+       // servletRequest.getParameterNames();
 
+
+        //final HttpServletRequest requestBuffered = (HttpServletRequest) servletRequest;
         final HttpServletRequest requestBuffered = new BufferedRequestWrapper((HttpServletRequest) servletRequest);
+      //  final HttpServletRequest requestBuffered = new HttpServletRequestWrapper((HttpServletRequest) servletRequest);
         final HttpServletResponse responseBuffered = new ResponseErrorWrapper((HttpServletResponse) servletResponse);
 
         KeycloakSessionFactory sessionFactory = (KeycloakSessionFactory) requestBuffered.getServletContext().getAttribute(KeycloakSessionFactory.class.getName());
@@ -183,7 +186,7 @@ public class KeycloakSessionServletFilter implements Filter {
 
 
                     ((ResponseErrorWrapper) responseBuffered).clearError();
-                    ((BufferedRequestWrapper) requestBuffered).retryRequest();
+                   // ((BufferedRequestWrapper) requestBuffered).retryRequest();
                     Thread.yield();
                 }
 
