@@ -220,11 +220,26 @@ public final class KeycloakModelUtils {
      * @param task
      */
     public static void runJobInTransaction(KeycloakSessionFactory factory, KeycloakSessionTask task) {
+        int attempt = 0;
+        int maxRetries = 10;
+
         KeycloakSession session = factory.create();
         KeycloakTransaction tx = session.getTransactionManager();
         try {
             tx.begin();
-            task.run(session);
+          //  task.run(session);
+            while (attempt < maxRetries){
+                try {
+                    task.run(session);
+                    break;
+                }catch(RuntimeException e){
+                    e.printStackTrace();
+                    System.out.println("GOTCHA RunInTx"+attempt);
+                    attempt++;
+                    tx.rollback();
+                    Thread.yield();
+                }
+            }
 
             if (tx.isActive()) {
                 if (tx.getRollbackOnly()) {

@@ -19,10 +19,10 @@ package org.keycloak.services.filters;
 
 import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.keycloak.common.ClientConnection;
+import org.keycloak.exceptions.RetryableTransactionException;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.KeycloakTransaction;
-import org.keycloak.services.error.RetryableTransactionException;
 import org.keycloak.services.util.BufferedRequestWrapper;
 import org.keycloak.services.util.ResponseErrorWrapper;
 
@@ -183,7 +183,6 @@ public class KeycloakSessionServletFilter implements Filter {
                     System.out.println("GOTCHA"+ attempts);
                     attempts++;
                     tx.rollback();
-
 
                     ((ResponseErrorWrapper) responseBuffered).clearError();
                    // ((BufferedRequestWrapper) requestBuffered).retryRequest();

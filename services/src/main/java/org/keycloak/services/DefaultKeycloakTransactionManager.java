@@ -17,10 +17,10 @@
 package org.keycloak.services;
 
 import org.jboss.logging.Logger;
+import org.keycloak.exceptions.RetryableTransactionException;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakTransaction;
 import org.keycloak.models.KeycloakTransactionManager;
-import org.keycloak.services.error.RetryableTransactionException;
 import org.keycloak.transaction.JtaTransactionManagerLookup;
 import org.keycloak.transaction.JtaTransactionWrapper;
 

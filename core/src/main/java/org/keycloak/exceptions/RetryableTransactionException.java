@@ -1,4 +1,4 @@
-package org.keycloak.services.error;
+package org.keycloak.exceptions;
 
 public class RetryableTransactionException extends RuntimeException{
 

@@ -19,8 +19,8 @@ package org.keycloak.connections.jpa;
 
 import org.hibernate.exception.LockAcquisitionException;
 import org.jboss.logging.Logger;
+import org.keycloak.exceptions.RetryableTransactionException;
 import org.keycloak.models.KeycloakTransaction;
-import org.keycloak.services.error.RetryableTransactionException;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
