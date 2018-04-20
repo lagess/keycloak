@@ -23,6 +23,7 @@ import org.keycloak.common.util.CertificateUtils;
 import org.keycloak.common.util.KeyUtils;
 import org.keycloak.common.util.PemUtils;
 import org.keycloak.component.ComponentModel;
+import org.keycloak.exceptions.RetryableTransactionException;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticationFlowModel;
 import org.keycloak.models.ClientModel;
@@ -231,8 +232,18 @@ public final class KeycloakModelUtils {
             while (attempt < maxRetries){
                 try {
                     task.run(session);
+
+                    if (tx.isActive()) {
+                        if (tx.getRollbackOnly()) {
+                            tx.rollback();
+                        } else {
+                            tx.commit();
+                        }
+                    }
+
                     break;
-                }catch(RuntimeException e){
+
+                }catch(RetryableTransactionException e){
                     e.printStackTrace();
                     System.out.println("GOTCHA RunInTx"+attempt);
                     attempt++;
@@ -241,13 +252,6 @@ public final class KeycloakModelUtils {
                 }
             }
 
-            if (tx.isActive()) {
-                if (tx.getRollbackOnly()) {
-                    tx.rollback();
-                } else {
-                    tx.commit();
-                }
-            }
         } catch (RuntimeException re) {
             if (tx.isActive()) {
                 tx.rollback();
