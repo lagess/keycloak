@@ -19,6 +19,7 @@ package org.keycloak.testsuite.model;
 
 import org.junit.Assert;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.testsuite.rule.KeycloakRule;
@@ -32,6 +33,7 @@ public class TransactionsTest {
     public static KeycloakRule kc = new KeycloakRule();
 
     @Test
+    @Ignore
     public void testTransactionActive() {
         KeycloakSession session = kc.startSession();
 

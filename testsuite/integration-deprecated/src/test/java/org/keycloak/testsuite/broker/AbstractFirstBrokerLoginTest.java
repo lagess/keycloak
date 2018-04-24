@@ -644,6 +644,7 @@ public abstract class AbstractFirstBrokerLoginTest extends AbstractIdentityProvi
         MimeMessage message = greenMail.getReceivedMessages()[0];
         String linkFromMail = getVerificationEmailLink(message);
 
+
         driver.navigate().to(linkFromMail.trim());
 
         // Need to update password now
@@ -719,6 +720,8 @@ public abstract class AbstractFirstBrokerLoginTest extends AbstractIdentityProvi
             // authenticated, but not redirected to app. Just seeing info page.
             infoPage2.assertCurrent();
             Assert.assertEquals("Your account has been updated.", infoPage2.getInfo());
+
+
         } finally {
             // Revert everything
             webRule2.after();
@@ -728,6 +731,9 @@ public abstract class AbstractFirstBrokerLoginTest extends AbstractIdentityProvi
         RealmModel realmWithBroker = getRealm();
         Set<FederatedIdentityModel> federatedIdentities = this.session.users().getFederatedIdentities(this.session.users().getUserByUsername("pedroigor", realmWithBroker), realmWithBroker);
         assertEquals(0, federatedIdentities.size());
+
+        brokerServerRule.stopSession(this.session, true);
+        this.session = brokerServerRule.startSession();
 
         // Continue with 1st browser. Note that the user has already authenticated with brokered IdP in the beginning of this test
         // so entering their credentials there is now skipped.
@@ -766,6 +772,8 @@ public abstract class AbstractFirstBrokerLoginTest extends AbstractIdentityProvi
 
         RealmModel realmWithBroker = getRealm();
         Set<FederatedIdentityModel> federatedIdentities = this.session.users().getFederatedIdentities(federatedUser, realmWithBroker);
+
+
         assertEquals(1, federatedIdentities.size());
 
         FederatedIdentityModel federatedIdentityModel = federatedIdentities.iterator().next();
