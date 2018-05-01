@@ -44,12 +44,8 @@ public class KeycloakTransactionCommitter implements ContainerResponseFilter {
                     tx.commit();
                 }
             }catch(Exception e ){
-                System.out.println("Errror in COMITTER Filter");
-                e.printStackTrace();
                 throw e;
             }
-        }else{
-            System.out.println("***********************Tx inactive !!!!!!!!!!!!!!!");
         }
     }
 

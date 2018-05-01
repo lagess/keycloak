@@ -180,7 +180,6 @@ public class KeycloakSessionServletFilter implements Filter {
                 } catch (RetryableTransactionException e) {
                     //4. retry transaction
                     // rollback
-                    System.out.println("GOTCHA"+ attempts);
                     attempts++;
                     tx.rollback();
 
