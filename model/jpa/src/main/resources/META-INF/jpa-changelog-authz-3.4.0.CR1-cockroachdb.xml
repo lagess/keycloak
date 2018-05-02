@@ -221,7 +221,10 @@
                 <changeSetExecuted id="authz-3.4.0.CR1-resource-server-pk-change-part3" author="glavoie@gmail.com" changeLogFile="META-INF/jpa-changelog-authz-3.4.0.CR1.xml"/>
             </not>
         </preConditions>
-        <dropIndex indexName="UK_FRSRPT700S9V50BU18WS5HA6" tableName="RESOURCE_SERVER_POLICY"/>
+        <sql>
+            DROP INDEX RESOURCE_SERVER_POLICY@UK_FRSRPT700S9V50BU18WS5HA6 CASCADE
+        </sql>
+        <!-- <dropIndex indexName="UK_FRSRPT700S9V50BU18WS5HA6" tableName="RESOURCE_SERVER_POLICY"/> -->
     </changeSet>
     <changeSet id="authz-3.4.0.CR1-resource-server-pk-change-part3-fixed-nodropindex_sub_4" author="glavoie@gmail.com" runInTransaction="true">
         <preConditions onFail="MARK_RAN" onSqlOutput="TEST">
@@ -229,7 +232,10 @@
                 <changeSetExecuted id="authz-3.4.0.CR1-resource-server-pk-change-part3" author="glavoie@gmail.com" changeLogFile="META-INF/jpa-changelog-authz-3.4.0.CR1.xml"/>
             </not>
         </preConditions>
-        <dropIndex indexName="UK_FRSR6T700S9V50BU18WS5HA6" tableName="RESOURCE_SERVER_RESOURCE"/>
+        <sql>
+            DROP INDEX RESOURCE_SERVER_RESOURCE@UK_FRSR6T700S9V50BU18WS5HA6 CASCADE
+        </sql>
+        <!-- <dropIndex indexName="UK_FRSR6T700S9V50BU18WS5HA6" tableName="RESOURCE_SERVER_RESOURCE"/> -->
     </changeSet>
     <changeSet id="authz-3.4.0.CR1-resource-server-pk-change-part3-fixed-nodropindex_sub_5" author="glavoie@gmail.com" runInTransaction="true">
         <preConditions onFail="MARK_RAN" onSqlOutput="TEST">
@@ -237,7 +243,10 @@
                 <changeSetExecuted id="authz-3.4.0.CR1-resource-server-pk-change-part3" author="glavoie@gmail.com" changeLogFile="META-INF/jpa-changelog-authz-3.4.0.CR1.xml"/>
             </not>
         </preConditions>
-        <dropIndex indexName="UK_FRSRST700S9V50BU18WS5HA6" tableName="RESOURCE_SERVER_SCOPE"/>
+        <sql>
+            DROP INDEX RESOURCE_SERVER_SCOPE@UK_FRSRST700S9V50BU18WS5HA6 CASCADE
+        </sql>
+        <!-- <dropIndex indexName="UK_FRSRST700S9V50BU18WS5HA6" tableName="RESOURCE_SERVER_SCOPE"/> -->
     </changeSet>
     <changeSet id="authz-3.4.0.CR1-resource-server-pk-change-part3-fixed-nodropindex_sub_6" author="glavoie@gmail.com" runInTransaction="true">
         <preConditions onFail="MARK_RAN" onSqlOutput="TEST">
@@ -293,9 +302,12 @@
                 <changeSetExecuted id="authz-3.4.0.CR1-resource-server-pk-change-part3" author="glavoie@gmail.com" changeLogFile="META-INF/jpa-changelog-authz-3.4.0.CR1.xml"/>
             </not>
         </preConditions>
-        <dropIndex indexName="UK_AU8TT6T700S9V50BU18WS5HA6" tableName="RESOURCE_SERVER"/>
+        <sql>
+            DROP INDEX RESOURCE_SERVER@UK_AU8TT6T700S9V50BU18WS5HA6 CASCADE
+        </sql>
+        <!-- <dropIndex indexName="UK_AU8TT6T700S9V50BU18WS5HA6" tableName="RESOURCE_SERVER"/> -->
     </changeSet>
-    <changeSet id="authz-3.4.0.CR1-resource-server-pk-change-part3-fixed-nodropindex_sub_14a" author="glavoie@gmail.com">
+    <changeSet id="authz-3.4.0.CR1-resource-server-pk-change-part3-fixed-nodropindex_sub_14a" author="glavoie@gmail.com" runInTransaction="true">
         <createTable tableName="RESOURCE_SERVER_2">
             <column name="ID" type="VARCHAR(36)">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="PK_RESOURCE_SERVER"/>
@@ -308,13 +320,13 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet id="authz-3.4.0.CR1-resource-server-pk-change-part3-fixed-nodropindex_sub_14b" author="glavoie@gmail.com">
+    <changeSet id="authz-3.4.0.CR1-resource-server-pk-change-part3-fixed-nodropindex_sub_14b" author="glavoie@gmail.com" runInTransaction="true">
         <sql>insert into RESOURCE_SERVER_2 (ID,ALLOW_RS_REMOTE_MGMT,POLICY_ENFORCE_MODE) select CLIENT_ID,ALLOW_RS_REMOTE_MGMT,POLICY_ENFORCE_MODE from RESOURCE_SERVER</sql>
     </changeSet>
-    <changeSet id="authz-3.4.0.CR1-resource-server-pk-change-part3-fixed-nodropindex_sub_14c" author="glavoie@gmail.com">
+    <changeSet id="authz-3.4.0.CR1-resource-server-pk-change-part3-fixed-nodropindex_sub_14c" author="glavoie@gmail.com" runInTransaction="true">
         <dropTable tableName="RESOURCE_SERVER"/>
     </changeSet>
-    <changeSet id="authz-3.4.0.CR1-resource-server-pk-change-part3-fixed-nodropindex_sub_14d" author="glavoie@gmail.com">
+    <changeSet id="authz-3.4.0.CR1-resource-server-pk-change-part3-fixed-nodropindex_sub_14d" author="glavoie@gmail.com" runInTransaction="true">
         <renameTable oldTableName="RESOURCE_SERVER_2" newTableName="RESOURCE_SERVER"/>
     </changeSet>
     <changeSet id="authz-3.4.0.CR1-resource-server-pk-change-part3-fixed-nodropindex_sub_16" author="glavoie@gmail.com" runInTransaction="true">

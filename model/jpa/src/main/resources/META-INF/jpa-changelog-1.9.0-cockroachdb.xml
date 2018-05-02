@@ -64,7 +64,10 @@
         <dropForeignKeyConstraint baseTableName="REALM_CLIENT" constraintName="FK_M6QGA3RFME47335JY8JXYXH3I"/>
     </changeSet>
     <changeSet id="1.9.0_sub_12" author="mposolda@redhat.com" runInTransaction="true">
-        <dropIndex indexName="UK_M6QGA3RFME47335JY8JXYXH3I" tableName="REALM_CLIENT"/>
+        <sql>
+            DROP INDEX REALM_CLIENT@UK_M6QGA3RFME47335JY8JXYXH3I CASCADE
+        </sql>
+        <!-- <dropIndex indexName="UK_M6QGA3RFME47335JY8JXYXH3I" tableName="REALM_CLIENT"/> -->
     </changeSet>
     <changeSet id="1.9.0_sub_13" author="mposolda@redhat.com" runInTransaction="true">
         <dropTable tableName="REALM_CLIENT"/>
@@ -85,7 +88,10 @@
         <dropForeignKeyConstraint baseTableName="FED_PROVIDERS" constraintName="FK_DCCIRJLIPU1478VQC89DID88C"/>
     </changeSet>
     <changeSet id="1.9.0_sub_19" author="mposolda@redhat.com" runInTransaction="true">
-        <dropIndex indexName="UK_DCCIRJLIPU1478VQC89DID88C" tableName="FED_PROVIDERS"/>
+        <!-- <dropIndex indexName="UK_DCCIRJLIPU1478VQC89DID88C" tableName="FED_PROVIDERS"/> -->
+        <sql>
+            DROP INDEX FED_PROVIDERS@UK_DCCIRJLIPU1478VQC89DID88C CASCADE
+        </sql>
     </changeSet>
     <changeSet id="1.9.0_sub_20" author="mposolda@redhat.com" runInTransaction="true">
         <dropTable tableName="FED_PROVIDERS"/>

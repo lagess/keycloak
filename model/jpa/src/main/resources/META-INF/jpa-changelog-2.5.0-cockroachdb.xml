@@ -611,7 +611,10 @@
                 <dbms type="oracle"/>
             </not>
         </preConditions>
-        <dropIndex indexName="UK_RU8TT6T700S9V50BU18WS5HA6" tableName="USER_ENTITY"/>
+        <sql>
+            DROP INDEX USER_ENTITY@UK_RU8TT6T700S9V50BU18WS5HA6 CASCADE
+        </sql>
+        <!-- <dropIndex indexName="UK_RU8TT6T700S9V50BU18WS5HA6" tableName="USER_ENTITY"/> -->
     </changeSet>
     <changeSet id="2.5.0-unicode-other-dbs_sub_21" author="hmlnarik@redhat.com" runInTransaction="true">
         <preConditions onFail="MARK_RAN" onSqlOutput="TEST">
@@ -922,7 +925,10 @@
                 <dbms type="oracle"/>
             </not>
         </preConditions>
-        <dropIndex indexName="UK_J3RWUVD56ONTGSUHOGM184WW2-2" tableName="KEYCLOAK_ROLE"/>
+        <sql>
+            DROP INDEX KEYCLOAK_ROLE@"UK_J3RWUVD56ONTGSUHOGM184WW2-2" CASCADE
+        </sql>
+        <!-- <dropIndex indexName="UK_J3RWUVD56ONTGSUHOGM184WW2-2" tableName="KEYCLOAK_ROLE"/> -->
     </changeSet>
     <changeSet id="2.5.0-unicode-other-dbs_sub_62" author="hmlnarik@redhat.com" runInTransaction="true">
         <preConditions onFail="MARK_RAN" onSqlOutput="TEST">

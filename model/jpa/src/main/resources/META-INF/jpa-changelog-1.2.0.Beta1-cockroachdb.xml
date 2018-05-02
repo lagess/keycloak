@@ -264,7 +264,10 @@
                 <dbms type="db2"/>
             </not>
         </preConditions>
-        <dropIndex indexName="UK_L5QGA3RFME47335JY8JXYXH3I" tableName="REALM_APPLICATION"/>
+        <sql>
+            DROP INDEX REALM_APPLICATION@UK_L5QGA3RFME47335JY8JXYXH3I CASCADE
+        </sql>
+       <!-- <dropIndex indexName="UK_L5QGA3RFME47335JY8JXYXH3I" tableName="REALM_APPLICATION"/> -->
     </changeSet>
     <changeSet id="1.2.0.Beta1_sub_20" author="psilva@redhat.com" runInTransaction="true">
         <preConditions onFail="MARK_RAN" onSqlOutput="TEST">

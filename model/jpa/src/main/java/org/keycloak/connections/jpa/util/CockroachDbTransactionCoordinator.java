@@ -238,4 +238,5 @@ public class CockroachDbTransactionCoordinator implements TransactionCoordinator
             // we don't want our transactions to become rollback only, because you could restore to a savepoint
         }
     }
+
 }

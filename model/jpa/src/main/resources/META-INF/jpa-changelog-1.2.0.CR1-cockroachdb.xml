@@ -346,7 +346,10 @@
                 <dbms type="db2"/>
             </not>
         </preConditions>
-        <dropIndex indexName="UK_J3RWUVD56ONTGSUHOGM184WW2" tableName="KEYCLOAK_ROLE"/>
+        <sql>
+            DROP INDEX KEYCLOAK_ROLE@UK_J3RWUVD56ONTGSUHOGM184WW2 CASCADE
+        </sql>
+        <!-- <dropIndex indexName="UK_J3RWUVD56ONTGSUHOGM184WW2" tableName="KEYCLOAK_ROLE"/> -->
     </changeSet>
     <changeSet id="1.2.0.RC1_sub_34" author="bburke@redhat.com" runInTransaction="true">
         <preConditions onFail="MARK_RAN" onSqlOutput="TEST">
