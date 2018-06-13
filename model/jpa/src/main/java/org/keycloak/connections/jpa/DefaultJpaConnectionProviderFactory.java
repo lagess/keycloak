@@ -116,12 +116,13 @@ public class DefaultJpaConnectionProviderFactory implements JpaConnectionProvide
     }
 
     protected void checkJtaEnabled(KeycloakSessionFactory factory) {
-        jtaLookup = (JtaTransactionManagerLookup) factory.getProviderFactory(JtaTransactionManagerLookup.class);
+       /* jtaLookup = (JtaTransactionManagerLookup) factory.getProviderFactory(JtaTransactionManagerLookup.class);
         if (jtaLookup != null) {
             if (jtaLookup.getTransactionManager() != null) {
                 jtaEnabled = true;
             }
-        }
+        }*/
+        jtaEnabled = false;
     }
 
     private void lazyInit(KeycloakSession session) {

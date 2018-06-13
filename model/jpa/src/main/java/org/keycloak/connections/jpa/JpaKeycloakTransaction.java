@@ -37,6 +37,8 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
 
     private boolean ignoreRollbackOnly = false;
 
+    private boolean activeSavePoint = false;
+
     public JpaKeycloakTransaction(EntityManager em) {
         this.em = em;
     }
@@ -45,6 +47,7 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
     public void begin() {
         em.getTransaction().begin();
         em.createNativeQuery("SAVEPOINT cockroach_restart;").executeUpdate();
+        activeSavePoint = true;
     }
 
     @Override
@@ -53,6 +56,7 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
             logger.trace("Committing transaction");
             em.flush();
             em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart; COMMIT;").executeUpdate();
+            activeSavePoint = false;
         } catch (PersistenceException e) {
             if (e.getCause() instanceof LockAcquisitionException){
                 ignoreRollbackOnly = true;
@@ -92,11 +96,17 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
 
     @Override
     public void releaseSavePoint() {
+        if (!activeSavePoint){
+            //savepoint has already been released, nothing to do
+            return;
+        }
+
         try {
             logger.trace("Release SavePoint");
             em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart; COMMIT;").executeUpdate();
+            activeSavePoint = false;
         }catch(PersistenceException e){
-            System.out.println("Exception swallowed for release SavePt"+ e.getMessage());
+            logger.debug("Exception swallowed during savepoint release", e);
         }
     }
 

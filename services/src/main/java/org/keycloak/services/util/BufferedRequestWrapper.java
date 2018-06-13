@@ -158,10 +158,8 @@ public class BufferedRequestWrapper extends HttpServletRequestWrapper {
 
 
     private void loadInputStream() {
-        try {
-            InputStream stream = this._getHttpServletRequest().getInputStream();
+        try(InputStream stream = this._getHttpServletRequest().getInputStream()) {
             buffer = IOUtils.toByteArray(stream);
-
         } catch (IOException e) {
             //TODO
             e.printStackTrace();
