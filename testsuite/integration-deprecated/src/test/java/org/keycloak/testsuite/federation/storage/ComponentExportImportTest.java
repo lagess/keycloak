@@ -66,6 +66,9 @@ public class ComponentExportImportTest {
             session.realms().removeRealm(realm.getId());
         }
         keycloakRule.stopSession(session, true);
+
+        ExportImportConfig.setRealmName(null);
+        ExportImportConfig.setAction("");
     }
 
 
