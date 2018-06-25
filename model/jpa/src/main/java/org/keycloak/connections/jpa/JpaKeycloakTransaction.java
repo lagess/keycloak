@@ -55,7 +55,8 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
         try {
             logger.trace("Committing transaction");
             em.flush();
-            em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart; COMMIT;").executeUpdate();
+            em.createNativeQuery("RELEASE SAVEPOINT cockroach_restart;").executeUpdate();
+            em.getTransaction().commit();
             activeSavePoint = false;
         } catch (PersistenceException e) {
             if (e.getCause() instanceof LockAcquisitionException){
@@ -91,6 +92,7 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
 
     @Override
     public boolean isActive() {
+
         return em.getTransaction().isActive();
     }
 
