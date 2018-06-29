@@ -17,6 +17,7 @@
 
 package org.keycloak.connections.jpa;
 
+import javax.persistence.EntityTransaction;
 import org.hibernate.exception.LockAcquisitionException;
 import org.jboss.logging.Logger;
 import org.keycloak.exceptions.RetryableTransactionException;
@@ -24,6 +25,7 @@ import org.keycloak.models.KeycloakTransaction;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceException;
+import java.lang.reflect.Field;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -60,6 +62,7 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
             activeSavePoint = false;
         } catch (PersistenceException e) {
             if (e.getCause() instanceof LockAcquisitionException){
+                cancelRollbakcOnlyFlag(em.getTransaction());
                 ignoreRollbackOnly = true;
                 throw new RetryableTransactionException(e);
             }
@@ -112,4 +115,19 @@ public class JpaKeycloakTransaction implements KeycloakTransaction {
         }
     }
 
+    private void cancelRollbakcOnlyFlag(EntityTransaction transaction){
+
+        try{
+        // Get the private field
+        final Field field = transaction.getClass().getDeclaredField("rollbackOnly");
+        // Allow modification on the field
+        field.setAccessible(true);
+        field.set(transaction, false);
+
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
+
+
+    }
 }
