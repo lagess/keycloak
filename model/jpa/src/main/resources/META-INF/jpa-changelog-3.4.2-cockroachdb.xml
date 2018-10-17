@@ -1,0 +1,1213 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  ~ * Copyright 2017 Red Hat, Inc. and/or its affiliates
+  ~ * and other contributors as indicated by the @author tags.
+  ~ *
+  ~ * Licensed under the Apache License, Version 2.0 (the "License");
+  ~ * you may not use this file except in compliance with the License.
+  ~ * You may obtain a copy of the License at
+  ~ *
+  ~ * http://www.apache.org/licenses/LICENSE-2.0
+  ~ *
+  ~ * Unless required by applicable law or agreed to in writing, software
+  ~ * distributed under the License is distributed on an "AS IS" BASIS,
+  ~ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ * See the License for the specific language governing permissions and
+  ~ * limitations under the License.
+  -->
+
+<!-- Note that, CockroachDB does not support addition of some constraints (e.g. primary keys) after table creation, in such case a new table must be created and then data must be migrated.
+     Version 3.4.2 is the first one compatible with CockroachDB, so we directly create the database with the needed schema.
+ -->
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd">
+    <changeSet id="3.4.2-sub_0" author="" runInTransaction="true">
+        <sql>
+
+            CREATE TABLE realm (
+            id STRING(36) NOT NULL,
+            access_code_lifespan INT NULL,
+            user_action_lifespan INT NULL,
+            access_token_lifespan INT NULL,
+            account_theme STRING(255) NULL,
+            admin_theme STRING(255) NULL,
+            email_theme STRING(255) NULL,
+            enabled BOOL NOT NULL DEFAULT false,
+            events_enabled BOOL NOT NULL DEFAULT false,
+            events_expiration INT NULL,
+            login_theme STRING(255) NULL,
+            "name" STRING(255) NULL,
+            not_before INT NULL,
+            registration_allowed BOOL NOT NULL DEFAULT false,
+            remember_me BOOL NOT NULL DEFAULT false,
+            reset_password_allowed BOOL NOT NULL DEFAULT false,
+            social BOOL NOT NULL DEFAULT false,
+            ssl_required STRING(255) NULL,
+            sso_idle_timeout INT NULL,
+            sso_max_lifespan INT NULL,
+            update_profile_on_soc_login BOOL NOT NULL DEFAULT false,
+            verify_email BOOL NOT NULL DEFAULT false,
+            master_admin_client STRING(36) NULL,
+            login_lifespan INT NULL,
+            internationalization_enabled BOOL NOT NULL DEFAULT false,
+            default_locale STRING(255) NULL,
+            reg_email_as_username BOOL NOT NULL DEFAULT false,
+            admin_events_enabled BOOL NOT NULL DEFAULT false,
+            admin_events_details_enabled BOOL NOT NULL DEFAULT false,
+            edit_username_allowed BOOL NOT NULL DEFAULT false,
+            otp_policy_counter INT NULL DEFAULT 0:::INT,
+            otp_policy_window INT NULL DEFAULT 1:::INT,
+            otp_policy_period INT NULL DEFAULT 30:::INT,
+            otp_policy_digits INT NULL DEFAULT 6:::INT,
+            otp_policy_alg STRING(36) NULL DEFAULT 'HmacSHA1':::STRING,
+            otp_policy_type STRING(36) NULL DEFAULT 'totp':::STRING,
+            browser_flow STRING(36) NULL,
+            registration_flow STRING(36) NULL,
+            direct_grant_flow STRING(36) NULL,
+            reset_credentials_flow STRING(36) NULL,
+            client_auth_flow STRING(36) NULL,
+            offline_session_idle_timeout INT NULL DEFAULT 0:::INT,
+            revoke_refresh_token BOOL NOT NULL DEFAULT false,
+            access_token_life_implicit INT NULL DEFAULT 0:::INT,
+            password_policy STRING(2550) NULL,
+            login_with_email_allowed BOOL NOT NULL DEFAULT true,
+            duplicate_emails_allowed BOOL NOT NULL DEFAULT false,
+            docker_auth_flow STRING(36) NULL,
+            refresh_token_max_reuse INT NULL DEFAULT 0:::INT,
+            CONSTRAINT constraint_4a PRIMARY KEY (id ASC),
+            UNIQUE INDEX uk_orvsdmla56612eaefiq6wl5oi ("name" ASC),
+            INDEX fk_rsaf444kk6qrkms7n56aiwq5y (master_admin_client ASC),
+            INDEX fk_traf444kk6qrkms7n56aiwq5y (master_admin_client ASC),
+            INDEX idx_realm_master_adm_cli (master_admin_client ASC),
+            FAMILY "primary" (id, access_code_lifespan, user_action_lifespan, access_token_lifespan, account_theme, admin_theme, email_theme, enabled, events_enabled, events_expiration, login_theme, "name", not_before, registration_allowed, remember_me, reset_password_allowed, social, ssl_required, sso_idle_timeout, sso_max_lifespan, update_profile_on_soc_login, verify_email, master_admin_client, login_lifespan, internationalization_enabled, default_locale, reg_email_as_username, admin_events_enabled, admin_events_details_enabled, edit_username_allowed, otp_policy_counter, otp_policy_window, otp_policy_period, otp_policy_digits, otp_policy_alg, otp_policy_type, browser_flow, registration_flow, direct_grant_flow, reset_credentials_flow, client_auth_flow, offline_session_idle_timeout, revoke_refresh_token, access_token_life_implicit, password_policy, login_with_email_allowed, duplicate_emails_allowed, docker_auth_flow, refresh_token_max_reuse)
+            );
+
+            CREATE TABLE client_template (
+            id STRING(36) NOT NULL,
+            "name" STRING(255) NULL,
+            realm_id STRING(36) NULL,
+            protocol STRING(255) NULL,
+            full_scope_allowed BOOL NOT NULL DEFAULT false,
+            consent_required BOOL NOT NULL DEFAULT false,
+            standard_flow_enabled BOOL NOT NULL DEFAULT true,
+            implicit_flow_enabled BOOL NOT NULL DEFAULT false,
+            direct_access_grants_enabled BOOL NOT NULL DEFAULT false,
+            service_accounts_enabled BOOL NOT NULL DEFAULT false,
+            frontchannel_logout BOOL NOT NULL DEFAULT false,
+            bearer_only BOOL NOT NULL DEFAULT false,
+            public_client BOOL NOT NULL DEFAULT false,
+            description STRING(255) NULL,
+            CONSTRAINT pk_cli_template PRIMARY KEY (id ASC),
+            CONSTRAINT fk_realm_cli_tmplt FOREIGN KEY (realm_id) REFERENCES realm (id),
+            UNIQUE INDEX uk_cli_template (realm_id ASC, "name" ASC),
+            INDEX fk_realm_cli_tmplt (realm_id ASC),
+            FAMILY "primary" (id, "name", realm_id, protocol, full_scope_allowed, consent_required, standard_flow_enabled, implicit_flow_enabled, direct_access_grants_enabled, service_accounts_enabled, frontchannel_logout, bearer_only, public_client, description)
+            );
+
+            CREATE TABLE client (
+            id STRING(36) NOT NULL,
+            enabled BOOL NOT NULL DEFAULT false,
+            full_scope_allowed BOOL NOT NULL DEFAULT false,
+            client_id STRING(255) NULL,
+            not_before INT NULL,
+            public_client BOOL NOT NULL DEFAULT false,
+            secret STRING(255) NULL,
+            base_url STRING(255) NULL,
+            bearer_only BOOL NOT NULL DEFAULT false,
+            management_url STRING(255) NULL,
+            surrogate_auth_required BOOL NOT NULL DEFAULT false,
+            realm_id STRING(36) NULL,
+            protocol STRING(255) NULL,
+            node_rereg_timeout INT NULL DEFAULT 0:::INT,
+            frontchannel_logout BOOL NOT NULL DEFAULT false,
+            consent_required BOOL NOT NULL DEFAULT false,
+            service_accounts_enabled BOOL NOT NULL DEFAULT false,
+            client_authenticator_type STRING(255) NULL,
+            root_url STRING(255) NULL,
+            registration_token STRING(255) NULL,
+            standard_flow_enabled BOOL NOT NULL DEFAULT true,
+            implicit_flow_enabled BOOL NOT NULL DEFAULT false,
+            direct_access_grants_enabled BOOL NOT NULL DEFAULT false,
+            client_template_id STRING(36) NULL,
+            use_template_config BOOL NOT NULL DEFAULT false,
+            use_template_scope BOOL NOT NULL DEFAULT false,
+            use_template_mappers BOOL NOT NULL DEFAULT false,
+            description STRING(255) NULL,
+            "name" STRING(255) NULL,
+            CONSTRAINT constraint_7 PRIMARY KEY (id ASC),
+            CONSTRAINT fk_p56ctinxxb9gsk57fo49f9tac FOREIGN KEY (realm_id) REFERENCES realm (id),
+            UNIQUE INDEX uk_b71cjlbenv945rb6gcon438at (realm_id ASC, client_id ASC),
+            INDEX fk_p56ctinxxb9gsk57fo49f9tac (realm_id ASC),
+            CONSTRAINT fk_cli_tmplt_client FOREIGN KEY (client_template_id) REFERENCES client_template (id),
+            INDEX fk_cli_tmplt_client (client_template_id ASC),
+            INDEX idx_client_client_templ_id (client_template_id ASC),
+            FAMILY "primary" (id, enabled, full_scope_allowed, client_id, not_before, public_client, secret, base_url, bearer_only, management_url, surrogate_auth_required, realm_id, protocol, node_rereg_timeout, frontchannel_logout, consent_required, service_accounts_enabled, client_authenticator_type, root_url, registration_token, standard_flow_enabled, implicit_flow_enabled, direct_access_grants_enabled, client_template_id, use_template_config, use_template_scope, use_template_mappers, description, "name")
+            );
+
+            ALTER TABLE realm ADD CONSTRAINT fk_traf444kk6qrkms7n56aiwq5y FOREIGN KEY (master_admin_client) REFERENCES client (id);
+
+            CREATE TABLE event_entity (
+            id STRING(36) NOT NULL,
+            client_id STRING(255) NULL,
+            details_json STRING(2550) NULL,
+            error STRING(255) NULL,
+            ip_address STRING(255) NULL,
+            realm_id STRING(255) NULL,
+            session_id STRING(255) NULL,
+            event_time INT NULL,
+            type STRING(255) NULL,
+            user_id STRING(255) NULL,
+            CONSTRAINT constraint_4 PRIMARY KEY (id ASC),
+            FAMILY "primary" (id, client_id, details_json, error, ip_address, realm_id, session_id, event_time, type, user_id)
+            );
+
+            CREATE TABLE admin_event_entity (
+            id STRING(36) NOT NULL,
+            admin_event_time INT NULL,
+            realm_id STRING(255) NULL,
+            operation_type STRING(255) NULL,
+            auth_realm_id STRING(255) NULL,
+            auth_client_id STRING(255) NULL,
+            auth_user_id STRING(255) NULL,
+            ip_address STRING(255) NULL,
+            resource_path STRING(2550) NULL,
+            representation STRING NULL,
+            error STRING(255) NULL,
+            resource_type STRING(64) NULL,
+            CONSTRAINT constraint_admin_event_entity PRIMARY KEY (id ASC),
+            FAMILY "primary" (id, admin_event_time, realm_id, operation_type, auth_realm_id, auth_client_id, auth_user_id, ip_address, resource_path, representation, error, resource_type)
+            );
+
+            CREATE TABLE resource_server (
+            id STRING(36) NOT NULL,
+            allow_rs_remote_mgmt BOOL NOT NULL DEFAULT false,
+            policy_enforce_mode STRING(15) NOT NULL,
+            CONSTRAINT pk_resource_server PRIMARY KEY (id ASC),
+            FAMILY "primary" (id, allow_rs_remote_mgmt, policy_enforce_mode)
+            );
+
+            CREATE TABLE resource_server_policy (
+            id STRING(255) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            description STRING(255) NULL,
+            type STRING(255) NOT NULL,
+            decision_strategy STRING(20) NULL,
+            logic STRING(20) NULL,
+            resource_server_id STRING(36) NULL,
+            CONSTRAINT constraint_farsrp PRIMARY KEY (id ASC),
+            UNIQUE INDEX uk_frsrpt700s9v50bu18ws5ha6 ("name" ASC, resource_server_id ASC),
+            CONSTRAINT fk_frsrpo213xcx4wnkog82ssrfy FOREIGN KEY (resource_server_id) REFERENCES resource_server (id),
+            INDEX idx_res_serv_pol_res_serv (resource_server_id ASC),
+            INDEX fk_frsrpo213xcx4wnkog82ssrfy (resource_server_id ASC),
+            FAMILY "primary" (id, "name", description, type, decision_strategy, logic, resource_server_id)
+            );
+
+            CREATE TABLE associated_policy (
+            policy_id STRING(36) NOT NULL,
+            associated_policy_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_farsrpap PRIMARY KEY (policy_id ASC, associated_policy_id ASC),
+            INDEX fk_frsrpas14xcx4wnkog82ssrfy (policy_id ASC),
+            CONSTRAINT fk_frsr5s213xcx4wnkog82ssrfy FOREIGN KEY (associated_policy_id) REFERENCES resource_server_policy (id),
+            INDEX fk_frsr5s213xcx4wnkog82ssrfy (associated_policy_id ASC),
+            INDEX idx_assoc_pol_assoc_pol_id (associated_policy_id ASC),
+            CONSTRAINT fk_frsrpas14xcx4wnkog82ssrfy FOREIGN KEY (policy_id) REFERENCES resource_server_policy (id),
+            FAMILY "primary" (policy_id, associated_policy_id)
+            );
+
+            CREATE TABLE user_session (
+            id STRING(36) NOT NULL,
+            auth_method STRING(255) NULL,
+            ip_address STRING(255) NULL,
+            last_session_refresh INT NULL,
+            login_username STRING(255) NULL,
+            realm_id STRING(255) NULL,
+            remember_me BOOL NOT NULL DEFAULT false,
+            started INT NULL,
+            user_id STRING(255) NULL,
+            user_session_state INT NULL,
+            broker_session_id STRING(255) NULL,
+            broker_user_id STRING(255) NULL,
+            CONSTRAINT constraint_57 PRIMARY KEY (id ASC),
+            FAMILY "primary" (id, auth_method, ip_address, last_session_refresh, login_username, realm_id, remember_me, started, user_id, user_session_state, broker_session_id, broker_user_id)
+            );
+
+            CREATE TABLE offline_user_session (
+            user_session_id STRING(36) NOT NULL,
+            realm_id STRING(36) NOT NULL,
+            last_session_refresh INT NULL,
+            offline_flag STRING(4) NOT NULL,
+            data STRING NULL,
+            user_id STRING(255) NOT NULL,
+            CONSTRAINT constraint_offl_us_ses_pk2 PRIMARY KEY (user_session_id ASC, offline_flag ASC),
+            FAMILY "primary" (user_session_id, realm_id, last_session_refresh, offline_flag, data, user_id)
+            );
+
+            CREATE TABLE authentication_flow (
+            id STRING(36) NOT NULL,
+            alias STRING(255) NULL,
+            realm_id STRING(36) NULL,
+            provider_id STRING(36) NOT NULL DEFAULT 'basic-flow':::STRING,
+            top_level BOOL NOT NULL DEFAULT false,
+            built_in BOOL NOT NULL DEFAULT false,
+            description STRING(255) NULL,
+            CONSTRAINT constraint_auth_flow_pk PRIMARY KEY (id ASC),
+            CONSTRAINT fk_auth_flow_realm FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX fk_auth_flow_realm (realm_id ASC),
+            INDEX idx_auth_flow_realm (realm_id ASC),
+            FAMILY "primary" (id, alias, realm_id, provider_id, top_level, built_in, description)
+            );
+
+            CREATE TABLE authentication_execution (
+            id STRING(36) NOT NULL,
+            alias STRING(255) NULL,
+            authenticator STRING(36) NULL,
+            realm_id STRING(36) NULL,
+            flow_id STRING(36) NULL,
+            requirement INT NULL,
+            priority INT NULL,
+            authenticator_flow BOOL NOT NULL DEFAULT false,
+            auth_flow_id STRING(36) NULL,
+            auth_config STRING(36) NULL,
+            CONSTRAINT constraint_auth_exec_pk PRIMARY KEY (id ASC),
+            CONSTRAINT fk_auth_exec_realm FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX fk_auth_exec_realm (realm_id ASC),
+            CONSTRAINT fk_auth_exec_flow FOREIGN KEY (flow_id) REFERENCES authentication_flow (id),
+            INDEX fk_auth_exec_flow (flow_id ASC),
+            INDEX idx_auth_exec_realm_flow (realm_id ASC, flow_id ASC),
+            INDEX idx_auth_exec_flow (flow_id ASC),
+            FAMILY "primary" (id, alias, authenticator, realm_id, flow_id, requirement, priority, authenticator_flow, auth_flow_id, auth_config)
+            );
+
+            CREATE TABLE authenticator_config (
+            id STRING(36) NOT NULL,
+            alias STRING(255) NULL,
+            realm_id STRING(36) NULL,
+            CONSTRAINT constraint_auth_pk PRIMARY KEY (id ASC),
+            CONSTRAINT fk_auth_realm FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX fk_auth_realm (realm_id ASC),
+            INDEX idx_auth_config_realm (realm_id ASC),
+            FAMILY "primary" (id, alias, realm_id)
+            );
+
+            CREATE TABLE authenticator_config_entry (
+            authenticator_id STRING(36) NOT NULL,
+            value STRING NULL,
+            "name" STRING(255) NOT NULL,
+            CONSTRAINT constraint_auth_cfg_pk PRIMARY KEY (authenticator_id ASC, "name" ASC),
+            FAMILY "primary" (authenticator_id, value, "name")
+            );
+
+            CREATE TABLE broker_link (
+            identity_provider STRING(255) NOT NULL,
+            storage_provider_id STRING(255) NULL,
+            realm_id STRING(36) NOT NULL,
+            broker_user_id STRING(255) NULL,
+            broker_username STRING(255) NULL,
+            token STRING NULL,
+            user_id STRING(255) NOT NULL,
+            CONSTRAINT constr_broker_link_pk PRIMARY KEY (identity_provider ASC, user_id ASC),
+            FAMILY "primary" (identity_provider, storage_provider_id, realm_id, broker_user_id, broker_username, token, user_id)
+            );
+
+            CREATE TABLE client_attributes (
+            client_id STRING(36) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            value STRING(4000) NULL,
+            CONSTRAINT constraint_3c PRIMARY KEY (client_id ASC, "name" ASC),
+            INDEX fk3c47c64beacca966 (client_id ASC),
+            CONSTRAINT fk3c47c64beacca966 FOREIGN KEY (client_id) REFERENCES client (id),
+            FAMILY "primary" (client_id, "name", value)
+            );
+
+            CREATE TABLE keycloak_role (
+            id STRING(36) NOT NULL,
+            client_realm_constraint STRING(36) NULL,
+            client_role BOOL NOT NULL DEFAULT false,
+            realm_id STRING(255) NULL,
+            client STRING(36) NULL,
+            realm STRING(36) NULL,
+            scope_param_required BOOL NOT NULL DEFAULT false,
+            "name" STRING(255) NULL,
+            description STRING(255) NULL,
+            CONSTRAINT constraint_a PRIMARY KEY (id ASC),
+            CONSTRAINT fk_6vyqfe4cn4wlq8r6kt5vdsj5c FOREIGN KEY (realm) REFERENCES realm (id),
+            INDEX fk_6vyqfe4cn4wlq8r6kt5vdsj5c (realm ASC),
+            CONSTRAINT fk_kjho5le2c0ral09fl8cm9wfw9 FOREIGN KEY (client) REFERENCES client (id),
+            INDEX fk_pimo5le2c0ral09fl8cm9wfw9 (client ASC),
+            INDEX fk_kjho5le2c0ral09fl8cm9wfw9 (client ASC),
+            UNIQUE INDEX "UK_J3RWUVD56ONTGSUHOGM184WW2-2" ("name" ASC, client_realm_constraint ASC),
+            INDEX idx_keycloak_role_client (client ASC),
+            INDEX idx_keycloak_role_realm (realm ASC),
+            FAMILY "primary" (id, client_realm_constraint, client_role, realm_id, client, realm, scope_param_required, "name", description)
+            );
+
+            CREATE TABLE client_default_roles (
+            client_id STRING(36) NOT NULL,
+            role_id STRING(36) NOT NULL,
+            CONSTRAINT constr_client_default_roles PRIMARY KEY (client_id ASC, role_id ASC),
+            CONSTRAINT fk_8aelwnibji49avxsrtuf6xjow FOREIGN KEY (role_id) REFERENCES keycloak_role (id),
+            INDEX fk_8aelwnibji49avxsrtuf6xjow (role_id ASC),
+            INDEX idx_client_def_roles_client (client_id ASC),
+            UNIQUE INDEX uk_8aelwnibji49avxsrtuf6xjow (role_id ASC),
+            INDEX fk_nuilts7klwqw2h8m2b5joytky (client_id ASC),
+            CONSTRAINT fk_nuilts7klwqw2h8m2b5joytky FOREIGN KEY (client_id) REFERENCES client (id),
+            FAMILY "primary" (client_id, role_id)
+            );
+
+            CREATE TABLE identity_provider (
+            internal_id STRING(36) NOT NULL,
+            enabled BOOL NOT NULL DEFAULT false,
+            provider_alias STRING(255) NULL,
+            provider_id STRING(255) NULL,
+            store_token BOOL NOT NULL DEFAULT false,
+            authenticate_by_default BOOL NOT NULL DEFAULT false,
+            realm_id STRING(36) NULL,
+            add_token_role BOOL NOT NULL DEFAULT true,
+            trust_email BOOL NOT NULL DEFAULT false,
+            first_broker_login_flow_id STRING(36) NULL,
+            post_broker_login_flow_id STRING(36) NULL,
+            provider_display_name STRING(255) NULL,
+            link_only BOOL NOT NULL DEFAULT false,
+            CONSTRAINT constraint_2b PRIMARY KEY (internal_id ASC),
+            UNIQUE INDEX uk_2daelwnibji49avxsrtuf6xj33 (provider_alias ASC, realm_id ASC),
+            CONSTRAINT fk2b4ebc52ae5c3b34 FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX fk2b4ebc52ae5c3b34 (realm_id ASC),
+            INDEX idx_ident_prov_realm (realm_id ASC),
+            FAMILY "primary" (internal_id, enabled, provider_alias, provider_id, store_token, authenticate_by_default, realm_id, add_token_role, trust_email, first_broker_login_flow_id, post_broker_login_flow_id, provider_display_name, link_only)
+            );
+
+            CREATE TABLE identity_provider_config (
+            identity_provider_id STRING(36) NOT NULL,
+            value STRING NULL,
+            "name" STRING(255) NOT NULL,
+            CONSTRAINT constraint_d PRIMARY KEY (identity_provider_id ASC, "name" ASC),
+            INDEX fkdc4897cf864c4e43 (identity_provider_id ASC),
+            CONSTRAINT fkdc4897cf864c4e43 FOREIGN KEY (identity_provider_id) REFERENCES identity_provider (internal_id),
+            FAMILY "primary" (identity_provider_id, value, "name")
+            );
+
+            CREATE TABLE identity_provider_mapper (
+            id STRING(36) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            idp_alias STRING(255) NOT NULL,
+            idp_mapper_name STRING(255) NOT NULL,
+            realm_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_idpm PRIMARY KEY (id ASC),
+            CONSTRAINT fk_idpm_realm FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX fk_idpm_realm (realm_id ASC),
+            INDEX idx_id_prov_mapp_realm (realm_id ASC),
+            FAMILY "primary" (id, "name", idp_alias, idp_mapper_name, realm_id)
+            );
+
+            CREATE TABLE client_identity_prov_mapping (
+            client_id STRING(36) NOT NULL,
+            identity_provider_id STRING(36) NOT NULL,
+            retrieve_token BOOL NOT NULL DEFAULT false,
+            CONSTRAINT constr_client_iden_prov_map PRIMARY KEY (client_id ASC, identity_provider_id ASC),
+            INDEX idx_client_id_prov_map_client (client_id ASC),
+            CONSTRAINT fk_7celwnibji49avxsrtuf6xj12 FOREIGN KEY (identity_provider_id) REFERENCES identity_provider (internal_id),
+            INDEX fk_7celwnibji49avxsrtuf6xj12 (identity_provider_id ASC),
+            INDEX fk_56elwnibji49avxsrtuf6xj23 (client_id ASC),
+            UNIQUE INDEX uk_7caelwnibji49avxsrtuf6xj12 (identity_provider_id ASC, client_id ASC),
+            CONSTRAINT fk_56elwnibji49avxsrtuf6xj23 FOREIGN KEY (client_id) REFERENCES client (id),
+            FAMILY "primary" (client_id, identity_provider_id, retrieve_token)
+            );
+
+            CREATE TABLE client_initial_access (
+            id STRING(36) NOT NULL,
+            realm_id STRING(36) NOT NULL,
+            "timestamp" INT NULL,
+            expiration INT NULL,
+            count INT NULL,
+            remaining_count INT NULL,
+            CONSTRAINT cnstr_client_init_acc_pk PRIMARY KEY (id ASC),
+            CONSTRAINT fk_client_init_acc_realm FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX idx_client_init_acc_realm (realm_id ASC),
+            INDEX fk_client_init_acc_realm (realm_id ASC),
+            FAMILY "primary" (id, realm_id, "timestamp", expiration, count, remaining_count)
+            );
+
+            CREATE TABLE client_node_registrations (
+            client_id STRING(36) NOT NULL,
+            value INT NULL,
+            "name" STRING(255) NOT NULL,
+            CONSTRAINT constraint_84 PRIMARY KEY (client_id ASC, "name" ASC),
+            INDEX fk8454723ba992f594 (client_id ASC),
+            INDEX fk4129723ba992f594 (client_id ASC),
+            CONSTRAINT fk4129723ba992f594 FOREIGN KEY (client_id) REFERENCES client (id),
+            FAMILY "primary" (client_id, value, "name")
+            );
+
+            CREATE TABLE client_session (
+            id STRING(36) NOT NULL,
+            client_id STRING(36) NULL,
+            redirect_uri STRING(255) NULL,
+            state STRING(255) NULL,
+            "timestamp" INT NULL,
+            session_id STRING(36) NULL,
+            auth_method STRING(255) NULL,
+            realm_id STRING(255) NULL,
+            auth_user_id STRING(36) NULL,
+            current_action STRING(36) NULL,
+            CONSTRAINT constraint_8 PRIMARY KEY (id ASC),
+            CONSTRAINT fk_b4ao2vcvat6ukau74wbwtfqo1 FOREIGN KEY (session_id) REFERENCES user_session (id),
+            INDEX fk_b4ao2vcvat6ukau74wbwtfqo1 (session_id ASC),
+            INDEX idx_client_session_session (session_id ASC),
+            FAMILY "primary" (id, client_id, redirect_uri, state, "timestamp", session_id, auth_method, realm_id, auth_user_id, current_action)
+            );
+
+            CREATE TABLE client_session_auth_status (
+            authenticator STRING(36) NOT NULL,
+            status INT NULL,
+            client_session STRING(36) NOT NULL,
+            CONSTRAINT constraint_auth_status_pk PRIMARY KEY (authenticator ASC, client_session ASC),
+            CONSTRAINT auth_status_constraint FOREIGN KEY (client_session) REFERENCES client_session (id),
+            INDEX auth_status_constraint (client_session ASC),
+            FAMILY "primary" (authenticator, status, client_session)
+            );
+
+            CREATE TABLE client_session_note (
+            "name" STRING(255) NOT NULL,
+            value STRING(255) NULL,
+            client_session STRING(36) NOT NULL,
+            CONSTRAINT constraint_5e PRIMARY KEY ("name" ASC, client_session ASC),
+            CONSTRAINT fk5edfb00ff51c2736 FOREIGN KEY (client_session) REFERENCES client_session (id),
+            INDEX fk5edfb00ff51c2736 (client_session ASC),
+            FAMILY "primary" ("name", value, client_session)
+            );
+
+            CREATE TABLE client_session_prot_mapper (
+            protocol_mapper_id STRING(36) NOT NULL,
+            client_session STRING(36) NOT NULL,
+            CONSTRAINT constraint_cs_pmp_pk PRIMARY KEY (protocol_mapper_id ASC, client_session ASC),
+            CONSTRAINT fk_33a8sgqw18i532811v7o2dk89 FOREIGN KEY (client_session) REFERENCES client_session (id),
+            INDEX fk_33a8sgqw18i532811v7o2dk89 (client_session ASC),
+            FAMILY "primary" (protocol_mapper_id, client_session)
+            );
+
+            CREATE TABLE client_session_role (
+            role_id STRING(255) NOT NULL,
+            client_session STRING(36) NOT NULL,
+            CONSTRAINT constraint_5 PRIMARY KEY (role_id ASC, client_session ASC),
+            CONSTRAINT fk_11b7sgqw18i532811v7o2dv76 FOREIGN KEY (client_session) REFERENCES client_session (id),
+            INDEX fk_11b7sgqw18i532811v7o2dv76 (client_session ASC),
+            FAMILY "primary" (role_id, client_session)
+            );
+
+            CREATE TABLE client_user_session_note (
+            "name" STRING(255) NOT NULL,
+            value STRING(2048) NULL,
+            client_session STRING(36) NOT NULL,
+            CONSTRAINT constr_cl_usr_ses_note PRIMARY KEY ("name" ASC, client_session ASC),
+            CONSTRAINT fk_cl_usr_ses_note FOREIGN KEY (client_session) REFERENCES client_session (id),
+            INDEX fk_cl_usr_ses_note (client_session ASC),
+            FAMILY "primary" ("name", value, client_session)
+            );
+
+            CREATE TABLE client_template_attributes (
+            template_id STRING(36) NOT NULL,
+            value STRING(2048) NULL,
+            "name" STRING(255) NOT NULL,
+            CONSTRAINT pk_cl_tmpl_attr PRIMARY KEY (template_id ASC, "name" ASC),
+            INDEX fk_cl_templ_attr_templ (template_id ASC),
+            CONSTRAINT fk_cl_templ_attr_templ FOREIGN KEY (template_id) REFERENCES client_template (id),
+            FAMILY "primary" (template_id, value, "name")
+            );
+
+            CREATE TABLE component (
+            id STRING(36) NOT NULL,
+            "name" STRING(255) NULL,
+            parent_id STRING(36) NULL,
+            provider_id STRING(36) NULL,
+            provider_type STRING(255) NULL,
+            realm_id STRING(36) NULL,
+            sub_type STRING(255) NULL,
+            CONSTRAINT constr_component_pk PRIMARY KEY (id ASC),
+            CONSTRAINT fk_component_realm FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX fk_component_realm (realm_id ASC),
+            INDEX idx_component_realm (realm_id ASC),
+            FAMILY "primary" (id, "name", parent_id, provider_id, provider_type, realm_id, sub_type)
+            );
+
+            CREATE TABLE component_config (
+            id STRING(36) NOT NULL,
+            component_id STRING(36) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            value STRING(4000) NULL,
+            CONSTRAINT constr_component_config_pk PRIMARY KEY (id ASC),
+            CONSTRAINT fk_component_config FOREIGN KEY (component_id) REFERENCES component (id),
+            INDEX fk_component_config (component_id ASC),
+            INDEX idx_compo_config_compo (component_id ASC),
+            FAMILY "primary" (id, component_id, "name", value)
+            );
+
+            CREATE TABLE composite_role (
+            composite STRING(36) NOT NULL,
+            child_role STRING(36) NOT NULL,
+            CONSTRAINT constraint_composite_role PRIMARY KEY (composite ASC, child_role ASC),
+            INDEX fk_a63wvekftu8jo1pnj81e7mce2 (composite ASC),
+            CONSTRAINT fk_gr7thllb9lu8q4vqa4524jjy8 FOREIGN KEY (child_role) REFERENCES keycloak_role (id),
+            INDEX fk_gr7thllb9lu8q4vqa4524jjy8 (child_role ASC),
+            INDEX idx_composite (composite ASC),
+            INDEX idx_composite_child (child_role ASC),
+            CONSTRAINT fk_a63wvekftu8jo1pnj81e7mce2 FOREIGN KEY (composite) REFERENCES keycloak_role (id),
+            FAMILY "primary" (composite, child_role)
+            );
+
+            CREATE TABLE user_entity (
+            id STRING(36) NOT NULL,
+            email STRING(255) NULL,
+            email_constraint STRING(255) NULL,
+            email_verified BOOL NOT NULL DEFAULT false,
+            enabled BOOL NOT NULL DEFAULT false,
+            federation_link STRING(255) NULL,
+            realm_id STRING(255) NULL,
+            created_timestamp INT NULL,
+            service_account_client_link STRING(36) NULL,
+            first_name STRING(255) NULL,
+            last_name STRING(255) NULL,
+            username STRING(255) NULL,
+            not_before INT NOT NULL DEFAULT 0:::INT,
+            CONSTRAINT constraint_fb PRIMARY KEY (id ASC),
+            UNIQUE INDEX uk_dykn684sl8up1crfei6eckhd7 (realm_id ASC, email_constraint ASC),
+            INDEX idx_user_email (email ASC),
+            UNIQUE INDEX uk_ru8tt6t700s9v50bu18ws5ha6 (realm_id ASC, username ASC),
+            FAMILY "primary" (id, email, email_constraint, email_verified, enabled, federation_link, realm_id, created_timestamp, service_account_client_link, first_name, last_name, username, not_before)
+            );
+
+            CREATE TABLE credential (
+            id STRING(36) NOT NULL,
+            device STRING(255) NULL,
+            hash_iterations INT NULL,
+            salt BYTES NULL,
+            type STRING(255) NULL,
+            user_id STRING(36) NULL,
+            created_date INT NULL,
+            counter INT NULL DEFAULT 0:::INT,
+            digits INT NULL DEFAULT 6:::INT,
+            period INT NULL DEFAULT 30:::INT,
+            algorithm STRING(36) NULL DEFAULT NULL,
+            value STRING(4000) NULL,
+            CONSTRAINT constraint_f PRIMARY KEY (id ASC),
+            CONSTRAINT fk_pfyr0glasqyl0dei3kl69r6v0 FOREIGN KEY (user_id) REFERENCES user_entity (id),
+            INDEX fk_pfyr0glasqyl0dei3kl69r6v0 (user_id ASC),
+            INDEX idx_user_credential (user_id ASC),
+            FAMILY "primary" (id, device, hash_iterations, salt, type, user_id, created_date, counter, digits, period, algorithm, value)
+            );
+
+            CREATE TABLE credential_attribute (
+            id STRING(36) NOT NULL,
+            credential_id STRING(36) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            value STRING(4000) NULL,
+            CONSTRAINT constraint_credential_attr PRIMARY KEY (id ASC),
+            CONSTRAINT fk_cred_attr FOREIGN KEY (credential_id) REFERENCES credential (id),
+            INDEX fk_cred_attr (credential_id ASC),
+            INDEX idx_credential_attr_cred (credential_id ASC),
+            FAMILY "primary" (id, credential_id, "name", value)
+            );
+
+            CREATE TABLE fed_user_credential (
+            id STRING(36) NOT NULL,
+            device STRING(255) NULL,
+            hash_iterations INT NULL,
+            salt BYTES NULL,
+            type STRING(255) NULL,
+            value STRING(255) NULL,
+            created_date INT NULL,
+            counter INT NULL DEFAULT 0:::INT,
+            digits INT NULL DEFAULT 6:::INT,
+            period INT NULL DEFAULT 30:::INT,
+            algorithm STRING(36) NULL DEFAULT 'HmacSHA1':::STRING,
+            user_id STRING(255) NOT NULL,
+            realm_id STRING(36) NOT NULL,
+            storage_provider_id STRING(36) NULL,
+            CONSTRAINT constr_fed_user_cred_pk PRIMARY KEY (id ASC),
+            INDEX idx_fu_credential (user_id ASC, type ASC),
+            INDEX idx_fu_credential_ru (realm_id ASC, user_id ASC),
+            FAMILY "primary" (id, device, hash_iterations, salt, type, value, created_date, counter, digits, period, algorithm, user_id, realm_id, storage_provider_id)
+            );
+
+            CREATE TABLE fed_credential_attribute (
+            id STRING(36) NOT NULL,
+            credential_id STRING(36) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            value STRING(4000) NULL,
+            CONSTRAINT constraint_fed_credential_attr PRIMARY KEY (id ASC),
+            CONSTRAINT fk_fed_cred_attr FOREIGN KEY (credential_id) REFERENCES fed_user_credential (id),
+            INDEX fk_fed_cred_attr (credential_id ASC),
+            INDEX idx_fed_cred_attr_cred (credential_id ASC),
+            FAMILY "primary" (id, credential_id, "name", value)
+            );
+
+            CREATE TABLE fed_user_attribute (
+            id STRING(36) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            user_id STRING(255) NOT NULL,
+            realm_id STRING(36) NOT NULL,
+            storage_provider_id STRING(36) NULL,
+            value STRING(2024) NULL,
+            CONSTRAINT constr_fed_user_attr_pk PRIMARY KEY (id ASC),
+            INDEX idx_fu_attribute (user_id ASC, realm_id ASC, "name" ASC),
+            FAMILY "primary" (id, "name", user_id, realm_id, storage_provider_id, value)
+            );
+
+            CREATE TABLE fed_user_consent (
+            id STRING(36) NOT NULL,
+            client_id STRING(36) NOT NULL,
+            user_id STRING(255) NOT NULL,
+            realm_id STRING(36) NOT NULL,
+            storage_provider_id STRING(36) NULL,
+            created_date INT NULL,
+            last_updated_date INT NULL,
+            CONSTRAINT constr_fed_user_consent_pk PRIMARY KEY (id ASC),
+            INDEX idx_fu_consent (user_id ASC, client_id ASC),
+            INDEX idx_fu_consent_ru (realm_id ASC, user_id ASC),
+            FAMILY "primary" (id, client_id, user_id, realm_id, storage_provider_id, created_date, last_updated_date)
+            );
+
+            CREATE TABLE fed_user_consent_prot_mapper (
+            user_consent_id STRING(36) NOT NULL,
+            protocol_mapper_id STRING(36) NOT NULL,
+            CONSTRAINT constr_user_consent_protm_pk PRIMARY KEY (user_consent_id ASC, protocol_mapper_id ASC),
+            FAMILY "primary" (user_consent_id, protocol_mapper_id)
+            );
+
+            CREATE TABLE fed_user_consent_role (
+            user_consent_id STRING(36) NOT NULL,
+            role_id STRING(36) NOT NULL,
+            CONSTRAINT constr_user_consent_role_pk PRIMARY KEY (user_consent_id ASC, role_id ASC),
+            FAMILY "primary" (user_consent_id, role_id)
+            );
+
+            CREATE TABLE fed_user_group_membership (
+            group_id STRING(36) NOT NULL,
+            user_id STRING(255) NOT NULL,
+            realm_id STRING(36) NOT NULL,
+            storage_provider_id STRING(36) NULL,
+            CONSTRAINT constr_fed_user_group PRIMARY KEY (group_id ASC, user_id ASC),
+            INDEX idx_fu_group_membership (user_id ASC, group_id ASC),
+            INDEX idx_fu_group_membership_ru (realm_id ASC, user_id ASC),
+            FAMILY "primary" (group_id, user_id, realm_id, storage_provider_id)
+            );
+
+            CREATE TABLE fed_user_required_action (
+            required_action STRING(255) NOT NULL DEFAULT ' ':::STRING,
+            user_id STRING(255) NOT NULL,
+            realm_id STRING(36) NOT NULL,
+            storage_provider_id STRING(36) NULL,
+            CONSTRAINT constr_fed_required_action PRIMARY KEY (required_action ASC, user_id ASC),
+            INDEX idx_fu_required_action (user_id ASC, required_action ASC),
+            INDEX idx_fu_required_action_ru (realm_id ASC, user_id ASC),
+            FAMILY "primary" (required_action, user_id, realm_id, storage_provider_id)
+            );
+
+            CREATE TABLE fed_user_role_mapping (
+            role_id STRING(36) NOT NULL,
+            user_id STRING(255) NOT NULL,
+            realm_id STRING(36) NOT NULL,
+            storage_provider_id STRING(36) NULL,
+            CONSTRAINT constr_fed_user_role PRIMARY KEY (role_id ASC, user_id ASC),
+            INDEX idx_fu_role_mapping (user_id ASC, role_id ASC),
+            INDEX idx_fu_role_mapping_ru (realm_id ASC, user_id ASC),
+            FAMILY "primary" (role_id, user_id, realm_id, storage_provider_id)
+            );
+
+            CREATE TABLE federated_identity (
+            identity_provider STRING(255) NOT NULL,
+            realm_id STRING(36) NULL,
+            federated_user_id STRING(255) NULL,
+            federated_username STRING(255) NULL,
+            token STRING NULL,
+            user_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_40 PRIMARY KEY (identity_provider ASC, user_id ASC),
+            CONSTRAINT fk404288b92ef007a6 FOREIGN KEY (user_id) REFERENCES user_entity (id),
+            INDEX fk404288b92ef007a6 (user_id ASC),
+            INDEX idx_fedidentity_user (user_id ASC),
+            INDEX idx_fedidentity_feduser (federated_user_id ASC),
+            FAMILY "primary" (identity_provider, realm_id, federated_user_id, federated_username, token, user_id)
+            );
+
+            CREATE TABLE federated_user (
+            id STRING(255) NOT NULL,
+            storage_provider_id STRING(255) NULL,
+            realm_id STRING(36) NOT NULL,
+            CONSTRAINT constr_federated_user PRIMARY KEY (id ASC),
+            FAMILY "primary" (id, storage_provider_id, realm_id)
+            );
+
+            CREATE TABLE keycloak_group (
+            id STRING(36) NOT NULL,
+            parent_group STRING(36) NULL,
+            realm_id STRING(36) NULL,
+            "name" STRING(255) NULL,
+            CONSTRAINT constraint_group PRIMARY KEY (id ASC),
+            CONSTRAINT fk_group_realm FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX fk_group_realm (realm_id ASC),
+            UNIQUE INDEX sibling_names (realm_id ASC, parent_group ASC, "name" ASC),
+            FAMILY "primary" (id, parent_group, realm_id, "name")
+            );
+
+            CREATE TABLE group_attribute (
+            id STRING(36) NOT NULL DEFAULT 'sybase-needs-something-here':::STRING,
+            "name" STRING(255) NOT NULL,
+            group_id STRING(36) NOT NULL,
+            value STRING(255) NULL,
+            CONSTRAINT constraint_group_attribute_pk PRIMARY KEY (id ASC),
+            CONSTRAINT fk_group_attribute_group FOREIGN KEY (group_id) REFERENCES keycloak_group (id),
+            INDEX fk_group_attribute_group (group_id ASC),
+            INDEX idx_group_attr_group (group_id ASC),
+            FAMILY "primary" (id, "name", group_id, value)
+            );
+
+            CREATE TABLE group_role_mapping (
+            role_id STRING(36) NOT NULL,
+            group_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_group_role PRIMARY KEY (role_id ASC, group_id ASC),
+            CONSTRAINT fk_group_role_group FOREIGN KEY (group_id) REFERENCES keycloak_group (id),
+            INDEX fk_group_role_group (group_id ASC),
+            INDEX fk_group_role_role (role_id ASC),
+            INDEX idx_group_role_mapp_group (group_id ASC),
+            CONSTRAINT fk_group_role_role FOREIGN KEY (role_id) REFERENCES keycloak_role (id),
+            FAMILY "primary" (role_id, group_id)
+            );
+
+            CREATE TABLE idp_mapper_config (
+            idp_mapper_id STRING(36) NOT NULL,
+            value STRING NULL,
+            "name" STRING(255) NOT NULL,
+            CONSTRAINT constraint_idpmconfig PRIMARY KEY (idp_mapper_id ASC, "name" ASC),
+            INDEX fk_idpmconfig (idp_mapper_id ASC),
+            CONSTRAINT fk_idpmconfig FOREIGN KEY (idp_mapper_id) REFERENCES identity_provider_mapper (id),
+            FAMILY "primary" (idp_mapper_id, value, "name")
+            );
+
+            CREATE TABLE migration_model (
+            id STRING(36) NOT NULL,
+            version STRING(36) NULL,
+            CONSTRAINT constraint_migmod PRIMARY KEY (id ASC),
+            FAMILY "primary" (id, version)
+            );
+
+            CREATE TABLE offline_client_session (
+            user_session_id STRING(36) NOT NULL,
+            client_id STRING(36) NOT NULL,
+            offline_flag STRING(4) NOT NULL,
+            "timestamp" INT NULL,
+            data STRING NULL,
+            CONSTRAINT constraint_offl_cl_ses_pk3 PRIMARY KEY (user_session_id ASC, client_id ASC, offline_flag ASC),
+            INDEX idx_us_sess_id_on_cl_sess (user_session_id ASC),
+            FAMILY "primary" (user_session_id, client_id, offline_flag, "timestamp", data)
+            );
+
+            CREATE TABLE policy_config (
+            policy_id STRING(36) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            value STRING NULL,
+            CONSTRAINT constraint_dpc PRIMARY KEY (policy_id ASC, "name" ASC),
+            INDEX fkdc34197cf864c4e43 (policy_id ASC),
+            CONSTRAINT fkdc34197cf864c4e43 FOREIGN KEY (policy_id) REFERENCES resource_server_policy (id),
+            FAMILY "primary" (policy_id, "name", value)
+            );
+
+            CREATE TABLE protocol_mapper (
+            id STRING(36) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            protocol STRING(255) NOT NULL,
+            protocol_mapper_name STRING(255) NOT NULL,
+            consent_required BOOL NOT NULL DEFAULT false,
+            consent_text STRING(255) NULL,
+            client_id STRING(36) NULL,
+            client_template_id STRING(36) NULL,
+            CONSTRAINT constraint_pcm PRIMARY KEY (id ASC),
+            CONSTRAINT fk_pcm_realm FOREIGN KEY (client_id) REFERENCES client (id),
+            INDEX fk_pcm_realm (client_id ASC),
+            CONSTRAINT fk_cli_tmplt_mapper FOREIGN KEY (client_template_id) REFERENCES client_template (id),
+            INDEX fk_cli_tmplt_mapper (client_template_id ASC),
+            INDEX idx_protocol_mapper_client (client_id ASC),
+            INDEX idx_proto_mapp_client_templ (client_template_id ASC),
+            FAMILY "primary" (id, "name", protocol, protocol_mapper_name, consent_required, consent_text, client_id, client_template_id)
+            );
+
+            CREATE TABLE protocol_mapper_config (
+            protocol_mapper_id STRING(36) NOT NULL,
+            value STRING NULL,
+            "name" STRING(255) NOT NULL,
+            CONSTRAINT constraint_pmconfig PRIMARY KEY (protocol_mapper_id ASC, "name" ASC),
+            INDEX fk_pmconfig (protocol_mapper_id ASC),
+            CONSTRAINT fk_pmconfig FOREIGN KEY (protocol_mapper_id) REFERENCES protocol_mapper (id),
+            FAMILY "primary" (protocol_mapper_id, value, "name")
+            );
+
+            CREATE TABLE realm_attribute (
+            "name" STRING(255) NOT NULL,
+            realm_id STRING(36) NOT NULL,
+            value STRING(255) NULL,
+            CONSTRAINT constraint_9 PRIMARY KEY ("name" ASC, realm_id ASC),
+            CONSTRAINT fk_8shxd6l3e9atqukacxgpffptw FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX fk_8shxd6l3e9atqukacxgpffptw (realm_id ASC),
+            INDEX idx_realm_attr_realm (realm_id ASC),
+            FAMILY "primary" ("name", realm_id, value)
+            );
+
+            CREATE TABLE realm_default_groups (
+            realm_id STRING(36) NOT NULL,
+            group_id STRING(36) NOT NULL,
+            CONSTRAINT constr_realm_default_groups PRIMARY KEY (realm_id ASC, group_id ASC),
+            INDEX fk_def_groups_realm (realm_id ASC),
+            CONSTRAINT fk_def_groups_group FOREIGN KEY (group_id) REFERENCES keycloak_group (id),
+            INDEX fk_def_groups_group (group_id ASC),
+            INDEX idx_realm_def_grp_realm (realm_id ASC),
+            UNIQUE INDEX con_group_id_def_groups (group_id ASC),
+            CONSTRAINT fk_def_groups_realm FOREIGN KEY (realm_id) REFERENCES realm (id),
+            FAMILY "primary" (realm_id, group_id)
+            );
+
+            CREATE TABLE realm_default_roles (
+            realm_id STRING(36) NOT NULL,
+            role_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_realm_default_roles PRIMARY KEY (realm_id ASC, role_id ASC),
+            CONSTRAINT fk_h4wpd7w4hsoolni3h0sw7btje FOREIGN KEY (role_id) REFERENCES keycloak_role (id),
+            UNIQUE INDEX uk_h4wpd7w4hsoolni3h0sw7btje (role_id ASC),
+            INDEX fk_evudb1ppw84oxfax2drs03icc (realm_id ASC),
+            INDEX idx_realm_def_roles_realm (realm_id ASC),
+            INDEX fk_h4wpd7w4hsoolni3h0sw7btje (role_id ASC),
+            CONSTRAINT fk_evudb1ppw84oxfax2drs03icc FOREIGN KEY (realm_id) REFERENCES realm (id),
+            FAMILY "primary" (realm_id, role_id)
+            );
+
+            CREATE TABLE realm_enabled_event_types (
+            realm_id STRING(36) NOT NULL,
+            value STRING(255) NOT NULL,
+            CONSTRAINT realm_enabled_event_types PRIMARY KEY (realm_id ASC, value ASC),
+            INDEX fk_h846o4h0w8epx5nwedrf5y69j (realm_id ASC),
+            INDEX idx_realm_evt_types_realm (realm_id ASC),
+            CONSTRAINT fk_h846o4h0w8epx5nwedrf5y69j FOREIGN KEY (realm_id) REFERENCES realm (id),
+            FAMILY "primary" (realm_id, value)
+            );
+
+            CREATE TABLE realm_events_listeners (
+            realm_id STRING(36) NOT NULL,
+            value STRING(255) NOT NULL,
+            CONSTRAINT constr_realm_events_listeners PRIMARY KEY (realm_id ASC, value ASC),
+            INDEX fk_h846o4h0w8epx5nxev9f5y69j (realm_id ASC),
+            INDEX idx_realm_evt_list_realm (realm_id ASC),
+            CONSTRAINT fk_h846o4h0w8epx5nxev9f5y69j FOREIGN KEY (realm_id) REFERENCES realm (id),
+            FAMILY "primary" (realm_id, value)
+            );
+
+            CREATE TABLE realm_required_credential (
+            type STRING(255) NOT NULL,
+            form_label STRING(255) NULL,
+            input BOOL NOT NULL DEFAULT false,
+            secret BOOL NOT NULL DEFAULT false,
+            realm_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_92 PRIMARY KEY (type ASC, realm_id ASC),
+            CONSTRAINT fk_5hg65lybevavkqfki3kponh9v FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX fk_5hg65lybevavkqfki3kponh9v (realm_id ASC),
+            FAMILY "primary" (type, form_label, input, secret, realm_id)
+            );
+
+            CREATE TABLE realm_smtp_config (
+            realm_id STRING(36) NOT NULL,
+            value STRING(255) NULL,
+            "name" STRING(255) NOT NULL,
+            CONSTRAINT constraint_e PRIMARY KEY (realm_id ASC, "name" ASC),
+            INDEX fk_70ej8xdxgxd0b9hh6180irr0o (realm_id ASC),
+            CONSTRAINT fk_70ej8xdxgxd0b9hh6180irr0o FOREIGN KEY (realm_id) REFERENCES realm (id),
+            FAMILY "primary" (realm_id, value, "name")
+            );
+
+            CREATE TABLE realm_supported_locales (
+            realm_id STRING(36) NOT NULL,
+            value STRING(255) NOT NULL,
+            CONSTRAINT constr_realm_supported_locales PRIMARY KEY (realm_id ASC, value ASC),
+            INDEX fk_supported_locales_realm (realm_id ASC),
+            INDEX idx_realm_supp_local_realm (realm_id ASC),
+            CONSTRAINT fk_supported_locales_realm FOREIGN KEY (realm_id) REFERENCES realm (id),
+            FAMILY "primary" (realm_id, value)
+            );
+
+            CREATE TABLE redirect_uris (
+            client_id STRING(36) NOT NULL,
+            value STRING(255) NOT NULL,
+            CONSTRAINT constraint_redirect_uris PRIMARY KEY (client_id ASC, value ASC),
+            INDEX fk_1burs8pb4ouj97h5wuppahv9f (client_id ASC),
+            INDEX idx_redir_uri_client (client_id ASC),
+            CONSTRAINT fk_1burs8pb4ouj97h5wuppahv9f FOREIGN KEY (client_id) REFERENCES client (id),
+            FAMILY "primary" (client_id, value)
+            );
+
+            CREATE TABLE required_action_config (
+            required_action_id STRING(36) NOT NULL,
+            value STRING NULL,
+            "name" STRING(255) NOT NULL,
+            CONSTRAINT constraint_req_act_cfg_pk PRIMARY KEY (required_action_id ASC, "name" ASC),
+            FAMILY "primary" (required_action_id, value, "name")
+            );
+
+            CREATE TABLE required_action_provider (
+            id STRING(36) NOT NULL,
+            alias STRING(255) NULL,
+            "name" STRING(255) NULL,
+            realm_id STRING(36) NULL,
+            enabled BOOL NOT NULL DEFAULT false,
+            default_action BOOL NOT NULL DEFAULT false,
+            provider_id STRING(255) NULL,
+            CONSTRAINT constraint_req_act_prv_pk PRIMARY KEY (id ASC),
+            CONSTRAINT fk_req_act_realm FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX fk_req_act_realm (realm_id ASC),
+            INDEX idx_req_act_prov_realm (realm_id ASC),
+            FAMILY "primary" (id, alias, "name", realm_id, enabled, default_action, provider_id)
+            );
+
+            CREATE TABLE resource_server_resource (
+            id STRING(36) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            uri STRING(255) NULL,
+            type STRING(255) NULL,
+            icon_uri STRING(255) NULL,
+            owner STRING(36) NOT NULL,
+            resource_server_id STRING(36) NULL,
+            CONSTRAINT constraint_farsr PRIMARY KEY (id ASC),
+            UNIQUE INDEX uk_frsr6t700s9v50bu18ws5ha6 ("name" ASC, owner ASC, resource_server_id ASC),
+            CONSTRAINT fk_frsrho213xcx4wnkog82ssrfy FOREIGN KEY (resource_server_id) REFERENCES resource_server (id),
+            INDEX idx_res_srv_res_res_srv (resource_server_id ASC),
+            INDEX fk_frsrho213xcx4wnkog82ssrfy (resource_server_id ASC),
+            FAMILY "primary" (id, "name", uri, type, icon_uri, owner, resource_server_id)
+            );
+
+            CREATE TABLE resource_policy (
+            resource_id STRING(36) NOT NULL,
+            policy_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_farsrpp PRIMARY KEY (resource_id ASC, policy_id ASC),
+            INDEX fk_frsrpos53xcx4wnkog82ssrfy (resource_id ASC),
+            CONSTRAINT fk_frsrpp213xcx4wnkog82ssrfy FOREIGN KEY (policy_id) REFERENCES resource_server_policy (id),
+            INDEX fk_frsrpp213xcx4wnkog82ssrfy (policy_id ASC),
+            INDEX idx_res_policy_policy (policy_id ASC),
+            CONSTRAINT fk_frsrpos53xcx4wnkog82ssrfy FOREIGN KEY (resource_id) REFERENCES resource_server_resource (id),
+            FAMILY "primary" (resource_id, policy_id)
+            );
+
+            CREATE TABLE resource_server_scope (
+            id STRING(36) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            icon_uri STRING(255) NULL,
+            resource_server_id STRING(36) NULL,
+            CONSTRAINT constraint_farsrs PRIMARY KEY (id ASC),
+            UNIQUE INDEX uk_frsrst700s9v50bu18ws5ha6 ("name" ASC, resource_server_id ASC),
+            CONSTRAINT fk_frsrso213xcx4wnkog82ssrfy FOREIGN KEY (resource_server_id) REFERENCES resource_server (id),
+            INDEX idx_res_srv_scope_res_srv (resource_server_id ASC),
+            INDEX fk_frsrso213xcx4wnkog82ssrfy (resource_server_id ASC),
+            FAMILY "primary" (id, "name", icon_uri, resource_server_id)
+            );
+
+            CREATE TABLE resource_scope (
+            resource_id STRING(36) NOT NULL,
+            scope_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_farsrsp PRIMARY KEY (resource_id ASC, scope_id ASC),
+            INDEX fk_frsrpos13xcx4wnkog82ssrfy (resource_id ASC),
+            CONSTRAINT fk_frsrps213xcx4wnkog82ssrfy FOREIGN KEY (scope_id) REFERENCES resource_server_scope (id),
+            INDEX fk_frsrps213xcx4wnkog82ssrfy (scope_id ASC),
+            INDEX idx_res_scope_scope (scope_id ASC),
+            CONSTRAINT fk_frsrpos13xcx4wnkog82ssrfy FOREIGN KEY (resource_id) REFERENCES resource_server_resource (id),
+            FAMILY "primary" (resource_id, scope_id)
+            );
+
+            CREATE TABLE scope_mapping (
+            client_id STRING(36) NOT NULL,
+            role_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_81 PRIMARY KEY (client_id ASC, role_id ASC),
+            INDEX fk_ouse064plmlr732lxjcn1q5f1 (client_id ASC),
+            CONSTRAINT fk_p3rh9grku11kqfrs4fltt7rnq FOREIGN KEY (role_id) REFERENCES keycloak_role (id),
+            INDEX fk_p3rh9grku11kqfrs4fltt7rnq (role_id ASC),
+            INDEX idx_scope_mapping_role (role_id ASC),
+            CONSTRAINT fk_ouse064plmlr732lxjcn1q5f1 FOREIGN KEY (client_id) REFERENCES client (id),
+            FAMILY "primary" (client_id, role_id)
+            );
+
+            CREATE TABLE scope_policy (
+            scope_id STRING(36) NOT NULL,
+            policy_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_farsrsps PRIMARY KEY (scope_id ASC, policy_id ASC),
+            INDEX fk_frsrpass3xcx4wnkog82ssrfy (scope_id ASC),
+            CONSTRAINT fk_frsrasp13xcx4wnkog82ssrfy FOREIGN KEY (policy_id) REFERENCES resource_server_policy (id),
+            INDEX fk_frsrasp13xcx4wnkog82ssrfy (policy_id ASC),
+            INDEX idx_scope_policy_policy (policy_id ASC),
+            CONSTRAINT fk_frsrpass3xcx4wnkog82ssrfy FOREIGN KEY (scope_id) REFERENCES resource_server_scope (id),
+            FAMILY "primary" (scope_id, policy_id)
+            );
+
+            CREATE TABLE template_scope_mapping (
+            template_id STRING(36) NOT NULL,
+            role_id STRING(36) NOT NULL,
+            CONSTRAINT pk_template_scope PRIMARY KEY (template_id ASC, role_id ASC),
+            INDEX fk_templ_scope_templ (template_id ASC),
+            CONSTRAINT fk_templ_scope_role FOREIGN KEY (role_id) REFERENCES keycloak_role (id),
+            INDEX fk_templ_scope_role (role_id ASC),
+            INDEX idx_templ_scope_mapp_role (role_id ASC),
+            CONSTRAINT fk_templ_scope_templ FOREIGN KEY (template_id) REFERENCES client_template (id),
+            FAMILY "primary" (template_id, role_id)
+            );
+
+            CREATE TABLE user_attribute (
+            id STRING(36) NOT NULL DEFAULT 'sybase-needs-something-here':::STRING,
+            "name" STRING(255) NOT NULL,
+            user_id STRING(36) NOT NULL,
+            value STRING(255) NULL,
+            CONSTRAINT constraint_user_attribute_pk PRIMARY KEY (id ASC),
+            CONSTRAINT fk_5hrm2vlf9ql5fu043kqepovbr FOREIGN KEY (user_id) REFERENCES user_entity (id),
+            INDEX fk_5hrm2vlf9ql5fu043kqepovbr (user_id ASC),
+            INDEX idx_user_attribute (user_id ASC),
+            FAMILY "primary" (id, "name", user_id, value)
+            );
+
+            CREATE TABLE user_consent (
+            id STRING(36) NOT NULL,
+            client_id STRING(36) NOT NULL,
+            user_id STRING(36) NOT NULL,
+            created_date INT NULL,
+            last_updated_date INT NULL,
+            CONSTRAINT constraint_grntcsnt_pm PRIMARY KEY (id ASC),
+            UNIQUE INDEX uk_jkuwuvd56ontgsuhogm8uewrt (client_id ASC, user_id ASC),
+            CONSTRAINT fk_grntcsnt_user FOREIGN KEY (user_id) REFERENCES user_entity (id),
+            INDEX fk_grntcsnt_user (user_id ASC),
+            INDEX idx_user_consent (user_id ASC),
+            FAMILY "primary" (id, client_id, user_id, created_date, last_updated_date)
+            );
+
+            CREATE TABLE user_consent_prot_mapper (
+            user_consent_id STRING(36) NOT NULL,
+            protocol_mapper_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_grntcsnt_prm_pm PRIMARY KEY (user_consent_id ASC, protocol_mapper_id ASC),
+            INDEX fk_grntcsnt_prm_gr (user_consent_id ASC),
+            INDEX idx_consent_protmapper (user_consent_id ASC),
+            CONSTRAINT fk_grntcsnt_prm_gr FOREIGN KEY (user_consent_id) REFERENCES user_consent (id),
+            FAMILY "primary" (user_consent_id, protocol_mapper_id)
+            );
+
+            CREATE TABLE user_consent_role (
+            user_consent_id STRING(36) NOT NULL,
+            role_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_grntcsnt_role_pm PRIMARY KEY (user_consent_id ASC, role_id ASC),
+            INDEX fk_grntcsnt_role_gr (user_consent_id ASC),
+            INDEX idx_consent_role (user_consent_id ASC),
+            CONSTRAINT fk_grntcsnt_role_gr FOREIGN KEY (user_consent_id) REFERENCES user_consent (id),
+            FAMILY "primary" (user_consent_id, role_id)
+            );
+
+            CREATE TABLE user_federation_provider (
+            id STRING(36) NOT NULL,
+            changed_sync_period INT NULL,
+            display_name STRING(255) NULL,
+            full_sync_period INT NULL,
+            last_sync INT NULL,
+            priority INT NULL,
+            provider_name STRING(255) NULL,
+            realm_id STRING(36) NULL,
+            CONSTRAINT constraint_5c PRIMARY KEY (id ASC),
+            CONSTRAINT fk_1fj32f6ptolw2qy60cd8n01e8 FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX fk_1fj32f6ptolw2qy60cd8n01e8 (realm_id ASC),
+            INDEX idx_usr_fed_prv_realm (realm_id ASC),
+            FAMILY "primary" (id, changed_sync_period, display_name, full_sync_period, last_sync, priority, provider_name, realm_id)
+            );
+
+            CREATE TABLE user_federation_config (
+            user_federation_provider_id STRING(36) NOT NULL,
+            value STRING(255) NULL,
+            "name" STRING(255) NOT NULL,
+            CONSTRAINT constraint_f9 PRIMARY KEY (user_federation_provider_id ASC, "name" ASC),
+            INDEX fk_t13hpu1j94r2ebpekr39x5eu5 (user_federation_provider_id ASC),
+            CONSTRAINT fk_t13hpu1j94r2ebpekr39x5eu5 FOREIGN KEY (user_federation_provider_id) REFERENCES user_federation_provider (id),
+            FAMILY "primary" (user_federation_provider_id, value, "name")
+            );
+
+            CREATE TABLE user_federation_mapper (
+            id STRING(36) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            federation_provider_id STRING(36) NOT NULL,
+            federation_mapper_type STRING(255) NOT NULL,
+            realm_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_fedmapperpm PRIMARY KEY (id ASC),
+            CONSTRAINT fk_fedmapperpm_realm FOREIGN KEY (realm_id) REFERENCES realm (id),
+            INDEX fk_fedmapperpm_realm (realm_id ASC),
+            CONSTRAINT fk_fedmapperpm_fedprv FOREIGN KEY (federation_provider_id) REFERENCES user_federation_provider (id),
+            INDEX fk_fedmapperpm_fedprv (federation_provider_id ASC),
+            INDEX idx_usr_fed_map_fed_prv (federation_provider_id ASC),
+            INDEX idx_usr_fed_map_realm (realm_id ASC),
+            FAMILY "primary" (id, "name", federation_provider_id, federation_mapper_type, realm_id)
+            );
+
+            CREATE TABLE user_federation_mapper_config (
+            user_federation_mapper_id STRING(36) NOT NULL,
+            value STRING(255) NULL,
+            "name" STRING(255) NOT NULL,
+            CONSTRAINT constraint_fedmapper_cfg_pm PRIMARY KEY (user_federation_mapper_id ASC, "name" ASC),
+            INDEX fk_fedmapper_cfg (user_federation_mapper_id ASC),
+            CONSTRAINT fk_fedmapper_cfg FOREIGN KEY (user_federation_mapper_id) REFERENCES user_federation_mapper (id),
+            FAMILY "primary" (user_federation_mapper_id, value, "name")
+            );
+
+            CREATE TABLE user_group_membership (
+            group_id STRING(36) NOT NULL,
+            user_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_user_group PRIMARY KEY (group_id ASC, user_id ASC),
+            CONSTRAINT fk_user_group_user FOREIGN KEY (user_id) REFERENCES user_entity (id),
+            INDEX fk_user_group_user (user_id ASC),
+            INDEX idx_user_group_mapping (user_id ASC),
+            FAMILY "primary" (group_id, user_id)
+            );
+
+            CREATE TABLE user_required_action (
+            user_id STRING(36) NOT NULL,
+            required_action STRING(255) NOT NULL DEFAULT ' ':::STRING,
+            CONSTRAINT constraint_required_action PRIMARY KEY (user_id ASC, required_action ASC),
+            INDEX fk_6qj3w1jw9cvafhe19bwsiuvmd (user_id ASC),
+            INDEX idx_user_reqactions (user_id ASC),
+            CONSTRAINT fk_6qj3w1jw9cvafhe19bwsiuvmd FOREIGN KEY (user_id) REFERENCES user_entity (id),
+            FAMILY "primary" (user_id, required_action)
+            );
+
+            CREATE TABLE user_role_mapping (
+            role_id STRING(255) NOT NULL,
+            user_id STRING(36) NOT NULL,
+            CONSTRAINT constraint_c PRIMARY KEY (role_id ASC, user_id ASC),
+            CONSTRAINT fk_c4fqv34p1mbylloxang7b1q3l FOREIGN KEY (user_id) REFERENCES user_entity (id),
+            INDEX fk_c4fqv34p1mbylloxang7b1q3l (user_id ASC),
+            INDEX idx_user_role_mapping (user_id ASC),
+            FAMILY "primary" (role_id, user_id)
+            );
+
+            CREATE TABLE user_session_note (
+            user_session STRING(36) NOT NULL,
+            "name" STRING(255) NOT NULL,
+            value STRING(2048) NULL,
+            CONSTRAINT constraint_usn_pk PRIMARY KEY (user_session ASC, "name" ASC),
+            INDEX fk5edfb00ff51d3472 (user_session ASC),
+            CONSTRAINT fk5edfb00ff51d3472 FOREIGN KEY (user_session) REFERENCES user_session (id),
+            FAMILY "primary" (user_session, "name", value)
+            );
+
+            CREATE TABLE username_login_failure (
+            realm_id STRING(36) NOT NULL,
+            username STRING(255) NOT NULL,
+            failed_login_not_before INT NULL,
+            last_failure INT NULL,
+            last_ip_failure STRING(255) NULL,
+            num_failures INT NULL,
+            CONSTRAINT "CONSTRAINT_17-2" PRIMARY KEY (realm_id ASC, username ASC),
+            FAMILY "primary" (realm_id, username, failed_login_not_before, last_failure, last_ip_failure, num_failures)
+            );
+
+            CREATE TABLE web_origins (
+            client_id STRING(36) NOT NULL,
+            value STRING(255) NOT NULL,
+            CONSTRAINT constraint_web_origins PRIMARY KEY (client_id ASC, value ASC),
+            INDEX fk_lojpho213xcx4wnkog82ssrfy (client_id ASC),
+            INDEX idx_web_orig_client (client_id ASC),
+            CONSTRAINT fk_lojpho213xcx4wnkog82ssrfy FOREIGN KEY (client_id) REFERENCES client (id),
+            FAMILY "primary" (client_id, value)
+            );
+
+        </sql>
+    </changeSet>
+</databaseChangeLog>
