@@ -76,6 +76,11 @@ public class InfinispanKeycloakTransaction implements KeycloakTransaction {
         return active;
     }
 
+    @Override
+    public void releaseSavePoint() {
+        // Nothing to do, specific to CockroachDB
+    }
+
     public <K, V> void put(Cache<K, V> cache, K key, V value) {
         log.tracev("Adding cache operation: {0} on {1}", CacheOperation.ADD, key);
 

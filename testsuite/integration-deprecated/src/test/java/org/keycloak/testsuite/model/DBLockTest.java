@@ -20,6 +20,7 @@ package org.keycloak.testsuite.model;
 import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
@@ -63,7 +64,9 @@ public class DBLockTest extends AbstractModelTest {
         commit();
     }
 
+    // CockroachDB has no lock mechanism, so this test is not relevant with CockroachDB
     @Test
+    @Ignore
     public void testLockConcurrently() throws Exception {
         long startupTime = System.currentTimeMillis();
 

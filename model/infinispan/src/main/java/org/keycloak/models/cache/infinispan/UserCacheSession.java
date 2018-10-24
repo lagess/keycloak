@@ -151,9 +151,9 @@ public class UserCacheSession implements UserCache {
 
             @Override
             public void rollback() {
-                setRollbackOnly = true;
                 runInvalidations();
-                transactionActive = false;
+                setRollbackOnly = false;
+                transactionActive = true;
             }
 
             @Override
@@ -169,6 +169,11 @@ public class UserCacheSession implements UserCache {
             @Override
             public boolean isActive() {
                 return transactionActive;
+            }
+
+            @Override
+            public void releaseSavePoint() {
+                // Nothing to do, specific to CockroachDB
             }
         };
     }

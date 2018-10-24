@@ -27,12 +27,7 @@ import org.keycloak.Config;
 import org.keycloak.common.util.SystemEnvProperties;
 import org.keycloak.exportimport.ExportImportManager;
 import org.keycloak.migration.MigrationModelManager;
-import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.KeycloakSessionFactory;
-import org.keycloak.models.KeycloakSessionTask;
-import org.keycloak.models.ModelDuplicateException;
-import org.keycloak.models.RealmModel;
-import org.keycloak.models.UserModel;
+import org.keycloak.models.*;
 import org.keycloak.models.dblock.DBLockManager;
 import org.keycloak.models.dblock.DBLockProvider;
 import org.keycloak.models.utils.KeycloakModelUtils;
@@ -241,6 +236,13 @@ public class KeycloakApplication extends Application {
 
     protected void migrateModel() {
         KeycloakSession session = sessionFactory.create();
+
+        Class c = session.getProviderClass("org.keycloak.connections.jpa.JpaConnectionProvider");
+        session.getProvider(c);
+        KeycloakTransaction tx = session.getTransactionManager();
+        ResteasyProviderFactory.pushContext(KeycloakSession.class, session);
+        ResteasyProviderFactory.pushContext(KeycloakTransaction.class, tx);
+
         try {
             session.getTransactionManager().begin();
             MigrationModelManager.migrate(session);

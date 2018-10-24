@@ -729,6 +729,10 @@ public abstract class AbstractFirstBrokerLoginTest extends AbstractIdentityProvi
         Set<FederatedIdentityModel> federatedIdentities = this.session.users().getFederatedIdentities(this.session.users().getUserByUsername("pedroigor", realmWithBroker), realmWithBroker);
         assertEquals(0, federatedIdentities.size());
 
+        // CockroachDB uses transaction isolation at SERIALIZABLE level. The following fix is needed to for this level of isolation.
+        brokerServerRule.stopSession(this.session, true);
+        this.session = brokerServerRule.startSession();
+
         // Continue with 1st browser. Note that the user has already authenticated with brokered IdP in the beginning of this test
         // so entering their credentials there is now skipped.
         loginToIDPWhenAlreadyLoggedIntoProviderIdP("pedroigor");

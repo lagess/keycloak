@@ -21,6 +21,7 @@ import org.infinispan.Cache;
 import org.infinispan.distexec.DefaultExecutorService;
 import org.infinispan.remoting.transport.Transport;
 import org.jboss.logging.Logger;
+import org.keycloak.exceptions.RetryableTransactionException;
 import org.keycloak.models.KeycloakSessionFactory;
 
 import java.io.Serializable;
@@ -113,8 +114,12 @@ public class InfinispanCacheInitializer extends BaseCacheInitializer {
                         errors++;
                         log.error("Interruped exception when computed future. Errors: " + errors, ie);
                     } catch (ExecutionException ee) {
-                        errors++;
-                        log.error("ExecutionException when computed future. Errors: " + errors, ee);
+                        if (!(ee.getCause() instanceof RetryableTransactionException)){
+                            errors++;
+                            log.error("ExecutionException when computed future. Errors: " + errors, ee);
+                        }else{
+                            //It is a retryable Tx, nothing to do here.
+                        }
                     }
                 }
 

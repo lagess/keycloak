@@ -19,9 +19,12 @@ package org.keycloak.services.filters;
 
 import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.keycloak.common.ClientConnection;
+import org.keycloak.exceptions.RetryableTransactionException;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.models.KeycloakTransaction;
+import org.keycloak.services.util.BufferedRequestWrapper;
+import org.keycloak.services.util.ResponseErrorWrapper;
 
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
@@ -32,6 +35,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
@@ -48,53 +52,89 @@ public class KeycloakSessionServletFilter implements Filter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         servletRequest.setCharacterEncoding("UTF-8");
 
-        final HttpServletRequest request = (HttpServletRequest)servletRequest;
 
-        KeycloakSessionFactory sessionFactory = (KeycloakSessionFactory) servletRequest.getServletContext().getAttribute(KeycloakSessionFactory.class.getName());
+        final HttpServletRequest requestBuffered = new BufferedRequestWrapper((HttpServletRequest) servletRequest);
+        final HttpServletResponse responseBuffered = new ResponseErrorWrapper((HttpServletResponse) servletResponse);
+
+        KeycloakSessionFactory sessionFactory = (KeycloakSessionFactory) requestBuffered.getServletContext().getAttribute(KeycloakSessionFactory.class.getName());
         KeycloakSession session = sessionFactory.create();
         ResteasyProviderFactory.pushContext(KeycloakSession.class, session);
         ClientConnection connection = new ClientConnection() {
             @Override
             public String getRemoteAddr() {
-                return request.getRemoteAddr();
+                return requestBuffered.getRemoteAddr();
             }
 
             @Override
             public String getRemoteHost() {
-                return request.getRemoteHost();
+                return requestBuffered.getRemoteHost();
             }
 
             @Override
             public int getRemotePort() {
-                return request.getRemotePort();
+                return requestBuffered.getRemotePort();
             }
 
             @Override
             public String getLocalAddr() {
-                return request.getLocalAddr();
+                return requestBuffered.getLocalAddr();
             }
 
             @Override
             public int getLocalPort() {
-                return request.getLocalPort();
+                return requestBuffered.getLocalPort();
             }
         };
         session.getContext().setConnection(connection);
         ResteasyProviderFactory.pushContext(ClientConnection.class, connection);
 
-        KeycloakTransaction tx = session.getTransactionManager();
-        ResteasyProviderFactory.pushContext(KeycloakTransaction.class, tx);
-        tx.begin();
+
+        int attempts = 0;
+        int maxRetries = 10;
 
         try {
-            filterChain.doFilter(servletRequest, servletResponse);
+            Class c = session.getProviderClass("org.keycloak.connections.jpa.JpaConnectionProvider");
+            session.getProvider(c);
+            KeycloakTransaction tx = session.getTransactionManager();
+            ResteasyProviderFactory.pushContext(KeycloakTransaction.class, tx);
+
+            //1. begin
+            tx.begin();
+
+
+            while (attempts < maxRetries) {
+                ResteasyProviderFactory.pushContext(KeycloakSession.class, session);
+                ResteasyProviderFactory.pushContext(ClientConnection.class, connection);
+                ResteasyProviderFactory.pushContext(KeycloakTransaction.class, tx);
+
+                try {
+                    //2. execute statements
+                    filterChain.doFilter(requestBuffered, responseBuffered);
+                    ((ResponseErrorWrapper) responseBuffered).flushError();
+                    return;
+                } catch (RetryableTransactionException e) {
+                    //3. retry transaction
+                    // rollback
+                    attempts++;
+                    tx.rollback();
+
+                    ((ResponseErrorWrapper) responseBuffered).clearError();
+                    Thread.yield();
+                }
+
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
-            if (servletRequest.isAsyncStarted()) {
-                servletRequest.getAsyncContext().addListener(createAsyncLifeCycleListener(session));
+
+            if (requestBuffered.isAsyncStarted()) {
+                requestBuffered.getAsyncContext().addListener(createAsyncLifeCycleListener(session));
             } else {
                 closeSession(session);
             }
         }
+
     }
 
     private AsyncListener createAsyncLifeCycleListener(final KeycloakSession session) {

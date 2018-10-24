@@ -34,7 +34,8 @@ import java.io.Serializable;
 @NamedQueries({
         @NamedQuery(name="deleteUserSessionsByRealm", query="delete from PersistentUserSessionEntity sess where sess.realmId = :realmId"),
         @NamedQuery(name="deleteUserSessionsByUser", query="delete from PersistentUserSessionEntity sess where sess.userId = :userId"),
-        @NamedQuery(name="deleteDetachedUserSessions", query="delete from PersistentUserSessionEntity sess where NOT EXISTS (select c.userSessionId from PersistentClientSessionEntity c where c.userSessionId = sess.userSessionId)"),
+        // CockroachDB currently does not support some types of queries. The current query is a performance optimization (998262177f6539480850eafc4e0dbdd67a373d3b), we go back to the previous version of the query which is not optimized but CockroachDB compatible.
+        @NamedQuery(name="deleteDetachedUserSessions", query="delete from PersistentUserSessionEntity sess where sess.userSessionId NOT IN (select c.userSessionId from PersistentClientSessionEntity c)"),
         @NamedQuery(name="findUserSessionsCount", query="select count(sess) from PersistentUserSessionEntity sess where sess.offline = :offline"),
         @NamedQuery(name="findUserSessions", query="select sess from PersistentUserSessionEntity sess where sess.offline = :offline order by sess.userSessionId"),
         @NamedQuery(name="updateUserSessionsTimestamps", query="update PersistentUserSessionEntity c set lastSessionRefresh = :lastSessionRefresh"),

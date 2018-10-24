@@ -17,6 +17,7 @@
 package org.keycloak.services;
 
 import org.jboss.logging.Logger;
+import org.keycloak.exceptions.RetryableTransactionException;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakTransaction;
 import org.keycloak.models.KeycloakTransactionManager;
@@ -159,19 +160,19 @@ public class DefaultKeycloakTransactionManager implements KeycloakTransactionMan
         }
 
         active = false;
+
         if (exception != null) {
+            if (exception instanceof RetryableTransactionException){
+                completed = false;
+                active = true;
+            }
+
             throw exception;
         }
     }
 
     @Override
     public void rollback() {
-        if (completed) {
-            return;
-        } else {
-            completed = true;
-        }
-
         RuntimeException exception = null;
         rollback(exception);
     }
@@ -191,7 +192,7 @@ public class DefaultKeycloakTransactionManager implements KeycloakTransactionMan
                 exception = exception != null ? e : exception;
             }
         }
-        active = false;
+
         if (exception != null) {
             throw exception;
         }
@@ -220,6 +221,13 @@ public class DefaultKeycloakTransactionManager implements KeycloakTransactionMan
     @Override
     public boolean isActive() {
         return active;
+    }
+
+    @Override
+    public void releaseSavePoint(){
+        for (KeycloakTransaction tx: transactions) {
+            tx.releaseSavePoint();
+        }
     }
 
 }
