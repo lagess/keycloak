@@ -36,11 +36,16 @@ public class KeycloakTransactionCommitter implements ContainerResponseFilter {
     @Override
     public void filter(ContainerRequestContext containerRequestContext, ContainerResponseContext containerResponseContext) throws IOException {
         KeycloakTransaction tx = ResteasyProviderFactory.getContextData(KeycloakTransaction.class);
+
         if (tx != null && tx.isActive()) {
-            if (tx.getRollbackOnly()) {
-                tx.rollback();
-            } else {
-                tx.commit();
+            try{
+                if (tx.getRollbackOnly()) {
+                    tx.rollback();
+                } else {
+                    tx.commit();
+                }
+            } catch (Exception e){
+                throw e;
             }
         }
     }

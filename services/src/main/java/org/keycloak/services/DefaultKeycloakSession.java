@@ -303,6 +303,10 @@ public class DefaultKeycloakSession implements KeycloakSession {
     }
 
     public void close() {
+        if (transactionManager != null){
+            transactionManager.releaseSavePoint();
+        }
+
         for (Provider p : providers.values()) {
             try {
                 p.close();

@@ -23,6 +23,7 @@ import org.keycloak.common.util.CertificateUtils;
 import org.keycloak.common.util.KeyUtils;
 import org.keycloak.common.util.PemUtils;
 import org.keycloak.component.ComponentModel;
+import org.keycloak.exceptions.RetryableTransactionException;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticationFlowModel;
 import org.keycloak.models.ClientModel;
@@ -220,18 +221,36 @@ public final class KeycloakModelUtils {
      * @param task
      */
     public static void runJobInTransaction(KeycloakSessionFactory factory, KeycloakSessionTask task) {
+        int attempt = 0;
+
+        // Arbitrary value
+        // TODO make it configurable, or check with cockroachlabs for guidelines
+        int maxRetries = 10;
+
         KeycloakSession session = factory.create();
         KeycloakTransaction tx = session.getTransactionManager();
         try {
             tx.begin();
-            task.run(session);
 
-            if (tx.isActive()) {
-                if (tx.getRollbackOnly()) {
+            while (attempt < maxRetries) {
+                try {
+                    task.run(session);
+
+                    if (tx.isActive()) {
+                        if (tx.getRollbackOnly()) {
+                            tx.rollback();
+                        } else {
+                            tx.commit();
+                        }
+                    }
+
+                    break;
+                } catch (RetryableTransactionException e) {
+                    attempt++;
                     tx.rollback();
-                } else {
-                    tx.commit();
+                    Thread.yield();
                 }
+
             }
         } catch (RuntimeException re) {
             if (tx.isActive()) {

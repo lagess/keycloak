@@ -5,6 +5,7 @@ import org.jboss.resteasy.spi.Failure;
 import org.jboss.resteasy.spi.HttpResponse;
 import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.keycloak.Config;
+import org.keycloak.exceptions.RetryableTransactionException;
 import org.keycloak.forms.login.freemarker.model.UrlBean;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakTransaction;
@@ -52,14 +53,19 @@ public class KeycloakErrorHandler implements ExceptionMapper<Throwable> {
 
     @Override
     public Response toResponse(Throwable throwable) {
-        KeycloakTransaction tx = ResteasyProviderFactory.getContextData(KeycloakTransaction.class);
-        tx.setRollbackOnly();
+        if (throwable instanceof RetryableTransactionException) {
+            RetryableTransactionException e = (RetryableTransactionException) throwable;
+            throw e;
+        }
 
         int statusCode = getStatusCode(throwable);
 
         if (statusCode >= 500 && statusCode <= 599) {
             logger.error("Uncaught server error", throwable);
         }
+
+        KeycloakTransaction tx = ResteasyProviderFactory.getContextData(KeycloakTransaction.class);
+        tx.setRollbackOnly();
 
         if (!MediaTypeMatcher.isHtmlRequest(headers)) {
             return Response.status(statusCode).build();

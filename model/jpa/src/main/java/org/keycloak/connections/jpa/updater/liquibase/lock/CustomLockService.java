@@ -141,38 +141,8 @@ public class CustomLockService extends StandardLockService {
 
     @Override
     public boolean acquireLock() {
-        if (hasChangeLogLock) {
-            // We already have a lock
-            return true;
-        }
-
-        Executor executor = ExecutorService.getInstance().getExecutor(database);
-
-        try {
-            database.rollback();
-
-            // Ensure table created and lock record inserted
-            this.init();
-        } catch (DatabaseException de) {
-            throw new IllegalStateException("Failed to retrieve lock", de);
-        }
-
-        try {
-            log.debug("Trying to lock database");
-            executor.execute(new LockDatabaseChangeLogStatement());
-            log.debug("Successfully acquired database lock");
-
-            hasChangeLogLock = true;
-            database.setCanCacheLiquibaseTableInfo(true);
-            return true;
-
-        } catch (DatabaseException de) {
-            log.warn("Lock didn't yet acquired. Will possibly retry to acquire lock. Details: " + de.getMessage());
-            if (log.isTraceEnabled()) {
-                log.debug(de.getMessage(), de);
-            }
-            return false;
-        }
+        // CockroachDB has no lock mechanism, so we consider it is always possible to acquire the "lock".
+        return true;
     }
 
 

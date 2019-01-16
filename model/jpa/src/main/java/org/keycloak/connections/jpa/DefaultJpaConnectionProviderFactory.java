@@ -23,6 +23,7 @@ import org.jboss.logging.Logger;
 import org.keycloak.Config;
 import org.keycloak.ServerStartupError;
 import org.keycloak.connections.jpa.updater.JpaUpdaterProvider;
+import org.keycloak.connections.jpa.util.CockroachDbTransactionCoordinatorBuilder;
 import org.keycloak.connections.jpa.util.JpaUtils;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
@@ -117,12 +118,7 @@ public class DefaultJpaConnectionProviderFactory implements JpaConnectionProvide
     }
 
     protected void checkJtaEnabled(KeycloakSessionFactory factory) {
-        jtaLookup = (JtaTransactionManagerLookup) factory.getProviderFactory(JtaTransactionManagerLookup.class);
-        if (jtaLookup != null) {
-            if (jtaLookup.getTransactionManager() != null) {
-                jtaEnabled = true;
-            }
-        }
+        jtaEnabled = false;
     }
 
     private void lazyInit(KeycloakSession session) {
@@ -168,6 +164,8 @@ public class DefaultJpaConnectionProviderFactory implements JpaConnectionProvide
 
                         properties.put("hibernate.show_sql", config.getBoolean("showSql", false));
                         properties.put("hibernate.format_sql", config.getBoolean("formatSql", true));
+                        properties.put("hibernate.transaction.coordinator_class", CockroachDbTransactionCoordinatorBuilder.class);
+
 
                         Connection connection = getConnection();
                         try {

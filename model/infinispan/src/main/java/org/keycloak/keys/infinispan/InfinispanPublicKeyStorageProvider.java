@@ -112,6 +112,11 @@ public class InfinispanPublicKeyStorageProvider implements PublicKeyStorageProvi
             public boolean isActive() {
                 return true;
             }
+
+            @Override
+            public void releaseSavePoint() {
+                // Nothing to do, specific to CockroachDB
+            }
         };
     }
 

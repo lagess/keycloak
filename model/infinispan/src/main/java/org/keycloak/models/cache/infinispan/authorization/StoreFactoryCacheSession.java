@@ -175,8 +175,8 @@ public class StoreFactoryCacheSession implements CachedStoreFactoryProvider {
 
             @Override
             public void rollback() {
-                setRollbackOnly = true;
-                transactionActive = false;
+                setRollbackOnly = false;
+                transactionActive = true;
             }
 
             @Override
@@ -192,6 +192,11 @@ public class StoreFactoryCacheSession implements CachedStoreFactoryProvider {
             @Override
             public boolean isActive() {
                 return transactionActive;
+            }
+
+            @Override
+            public void releaseSavePoint() {
+                // Nothing to do, specific to CockroachDB
             }
         };
     }
@@ -216,9 +221,9 @@ public class StoreFactoryCacheSession implements CachedStoreFactoryProvider {
             @Override
             public void rollback() {
                 try {
-                    setRollbackOnly = true;
                     runInvalidations();
-                    transactionActive = false;
+                    setRollbackOnly = false;
+                    transactionActive = true;
                 } finally {
                     cache.endRevisionBatch();
                 }
@@ -237,6 +242,11 @@ public class StoreFactoryCacheSession implements CachedStoreFactoryProvider {
             @Override
             public boolean isActive() {
                 return transactionActive;
+            }
+
+            @Override
+            public void releaseSavePoint() {
+                // Nothing to do, specific to CockroachDB
             }
         };
     }

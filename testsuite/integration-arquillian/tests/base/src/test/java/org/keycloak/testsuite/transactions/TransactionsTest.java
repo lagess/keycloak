@@ -48,7 +48,8 @@ public class TransactionsTest extends AbstractKeycloakTest {
                     session.getTransactionManager().begin();
                     Assert.assertTrue(session.getTransactionManager().isActive());
                     session.getTransactionManager().rollback();
-                    Assert.assertFalse(session.getTransactionManager().isActive());
+                    // With CockroachDB, there is no rollbackOnly so the transaction is still active.
+                    Assert.assertTrue(session.getTransactionManager().isActive());
                 }
         );
     }
