@@ -19,6 +19,7 @@ package org.keycloak.testsuite.model;
 
 import org.jboss.logging.Logger;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
@@ -153,6 +154,7 @@ public class ConcurrentTransactionsTest extends AbstractModelTest {
 
     // KEYCLOAK-3296 , KEYCLOAK-3494
     @Test
+    @Ignore
     public void removeUserAttribute() throws Exception {
         RealmModel realm = realmManager.createRealm("original");
         KeycloakSession session = realmManager.getSession();

@@ -730,6 +730,10 @@ public abstract class AbstractFirstBrokerLoginTest extends AbstractIdentityProvi
         Set<FederatedIdentityModel> federatedIdentities = this.session.users().getFederatedIdentities(this.session.users().getUserByUsername("pedroigor", realmWithBroker), realmWithBroker);
         assertEquals(0, federatedIdentities.size());
 
+        // Fix which allow to have a SERIALIZABLE isolation level in the database.
+        brokerServerRule.stopSession(this.session, true);
+        this.session = brokerServerRule.startSession();
+
         // Continue with 1st browser. Note that the user has already authenticated with brokered IdP in the beginning of this test
         // so entering their credentials there is now skipped.
         loginToIDPWhenAlreadyLoggedIntoProviderIdP("pedroigor");
