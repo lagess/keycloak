@@ -23,6 +23,7 @@ import org.keycloak.authentication.authenticators.browser.AbstractUsernameFormAu
 import org.keycloak.authentication.authenticators.client.ClientAuthUtil;
 import org.keycloak.common.ClientConnection;
 import org.keycloak.common.util.Time;
+import org.keycloak.credential.CredentialModel;
 import org.keycloak.events.Details;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventBuilder;
@@ -276,6 +277,8 @@ public class AuthenticationProcessor {
         List<AuthenticationExecutionModel> currentExecutions;
         FormMessage errorMessage;
         FormMessage successMessage;
+        String selectedCredentialId;
+        List<AuthenticationSelectionOption> authenticationSelections;
 
         private Result(AuthenticationExecutionModel execution, Authenticator authenticator, List<AuthenticationExecutionModel> currentExecutions) {
             this.execution = execution;
@@ -391,6 +394,26 @@ public class AuthenticationProcessor {
         @Override
         public void setUser(UserModel user) {
             setAutheticatedUser(user);
+        }
+
+        @Override
+        public String getSelectedCredentialId() {
+            return selectedCredentialId;
+        }
+
+        @Override
+        public void setSelectedCredentialId(String selectedCredentialId) {
+            this.selectedCredentialId = selectedCredentialId;
+        }
+
+        @Override
+        public List<AuthenticationSelectionOption> getAuthenticationSelections() {
+            return authenticationSelections;
+        }
+
+        @Override
+        public void setAuthenticationSelections(List<AuthenticationSelectionOption> authenticationSelections) {
+            this.authenticationSelections = authenticationSelections;
         }
 
         @Override
@@ -786,6 +809,9 @@ public class AuthenticationProcessor {
         AuthenticationFlow authenticationFlow = createFlowExecution(this.flowId, null);
         try {
             Response challenge = authenticationFlow.processFlow();
+            if (!authenticationFlow.isSuccessful()) {
+                throw new AuthenticationFlowException(AuthenticationFlowError.INVALID_CREDENTIALS);
+            }
             return challenge;
         } catch (Exception e) {
             return handleClientAuthException(e);
@@ -911,6 +937,9 @@ public class AuthenticationProcessor {
         if (challenge != null) return challenge;
         if (authenticationSession.getAuthenticatedUser() == null) {
             throw new AuthenticationFlowException(AuthenticationFlowError.UNKNOWN_USER);
+        }
+        if (!authenticationFlow.isSuccessful()) {
+            throw new AuthenticationFlowException(AuthenticationFlowError.INVALID_CREDENTIALS);
         }
         return challenge;
     }

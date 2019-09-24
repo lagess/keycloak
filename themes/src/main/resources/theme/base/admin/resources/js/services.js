@@ -642,6 +642,27 @@ module.factory('UserImpersonation', function($resource) {
 module.factory('UserCredentials', function($resource) {
     var credentials = {};
 
+    credentials.getCredentials = $resource(authUrl + '/admin/realms/:realm/users/:userId/credentials', {
+        realm : '@realm',
+        userId : '@userId'
+    }).query;
+
+    credentials.deleteCredential = $resource(authUrl + '/admin/realms/:realm/users/:userId/credentials/:credentialId', {
+        realm : '@realm',
+        userId : '@userId',
+        credentialId : '@credentialId'
+    }).delete;
+
+    credentials.updateCredential = $resource(authUrl + '/admin/realms/:realm/users/:userId/credentials/:credentialId', {
+        realm : '@realm',
+        userId : '@userId',
+        credentialId : '@credentialId'
+    }, {
+        update : {
+            method : 'PUT'
+        }
+    }).update;
+
     credentials.resetPassword = $resource(authUrl + '/admin/realms/:realm/users/:userId/reset-password', {
         realm : '@realm',
         userId : '@userId'
@@ -666,6 +687,27 @@ module.factory('UserCredentials', function($resource) {
     }, {
         update : {
             method : 'PUT'
+        }
+    }).update;
+
+    credentials.moveCredentialAfter = $resource(authUrl + '/admin/realms/:realm/users/:userId/credentials/:credentialId/moveAfter/:newPreviousCredentialId', {
+        realm : '@realm',
+        userId : '@userId',
+        credentialId : '@credentialId',
+        newPreviousCredentialId : '@newPreviousCredentialId'
+    }, {
+        update : {
+            method : 'POST'
+        }
+    }).update;
+
+    credentials.moveToFirst = $resource(authUrl + '/admin/realms/:realm/users/:userId/credentials/:credentialId/moveToFirst', {
+        realm : '@realm',
+        userId : '@userId',
+        credentialId : '@credentialId'
+    }, {
+        update : {
+            method : 'POST'
         }
     }).update;
 

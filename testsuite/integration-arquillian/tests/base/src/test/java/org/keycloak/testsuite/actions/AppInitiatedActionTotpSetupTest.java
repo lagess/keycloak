@@ -387,7 +387,7 @@ public class AppInitiatedActionTotpSetupTest extends AbstractAppInitiatedActionT
 
         events.expectLogin().user(userId).session(sessionId).detail(Details.USERNAME, "setupTotp2").assertEvent();
     }
-
+/*
     @Test
     public void setupOtpPolicyChangedTotp8Digits() {
         // set policy to 8 digits
@@ -441,7 +441,7 @@ public class AppInitiatedActionTotpSetupTest extends AbstractAppInitiatedActionT
                 .otpDigits(6);
         adminClient.realm("test").update(realmRep);
     }
-
+/*
     @Test
     public void setupOtpPolicyChangedHotp() {
         RealmRepresentation realmRep = adminClient.realm("test").toRepresentation();
@@ -522,5 +522,5 @@ public class AppInitiatedActionTotpSetupTest extends AbstractAppInitiatedActionT
         adminClient.realm("test").update(realmRep);
 
     }
-
+*/
 }
