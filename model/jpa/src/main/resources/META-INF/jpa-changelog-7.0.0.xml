@@ -77,4 +77,9 @@
 
     </changeSet>
 
+    <changeSet author="romain.poiffaut@elca.ch" id="8.0.0">
+        <!--Update format of credential to fill secret_data and credential_data-->
+        <customChange class="org.keycloak.connections.jpa.updater.liquibase.custom.JpaUpdate8_0_0_Flows"/>
+    </changeSet>
+
 </databaseChangeLog>
