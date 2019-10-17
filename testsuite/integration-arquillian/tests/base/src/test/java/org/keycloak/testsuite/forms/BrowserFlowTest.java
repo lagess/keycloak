@@ -22,11 +22,13 @@ import org.keycloak.models.IdentityProviderModel;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.utils.DefaultAuthenticationFlows;
 import org.keycloak.models.utils.TimeBasedOTP;
+import org.keycloak.representations.idm.IdentityProviderRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.services.resources.admin.AuthenticationManagementResource;
 import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
 import org.keycloak.testsuite.ActionURIUtils;
 import org.keycloak.testsuite.auth.page.login.OneTimeCode;
+import org.keycloak.testsuite.broker.SocialLoginTest;
 import org.keycloak.testsuite.model.ClientModelTest;
 import org.keycloak.testsuite.pages.ErrorPage;
 import org.keycloak.testsuite.pages.LoginPage;
@@ -41,10 +43,14 @@ import org.keycloak.testsuite.util.WaitUtils;
 import org.openqa.selenium.WebDriver;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.keycloak.testsuite.admin.AbstractAdminTest.loadJson;
 import static org.keycloak.testsuite.arquillian.DeploymentTargetModifier.AUTH_SERVER_CURRENT;
+import static org.keycloak.testsuite.broker.SocialLoginTest.Provider.GITHUB;
+import static org.keycloak.testsuite.broker.SocialLoginTest.Provider.GITLAB;
+import static org.keycloak.testsuite.broker.SocialLoginTest.Provider.GOOGLE;
 
 public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
     private static final String INVALID_AUTH_CODE = "Invalid authenticator code.";
@@ -215,6 +221,40 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
 
         } finally {
             testingClient.server("test").run(setBrowserFlowToRealm());
+        }
+    }
+
+
+    @Test
+    public void testSocialProvidersPresentOnLoginUsernameOnlyPageIfConfigured() {
+        String testRealm = "test";
+        // Test setup - Configure the testing Keycloak instance with UsernameForm & PasswordForm (both REQUIRED) and OTPFormAuthenticator (ALTERNATIVE)
+        testingClient.server(testRealm).run(configureBrowserFlowWithRequiredPasswordFormAndAlternativeOTP("browser - copy 1"));
+
+        try {
+            SocialLoginTest socialLoginTest = new SocialLoginTest();
+
+            // Add some sample dummy GitHub, Gitlab & Google social providers to the testing realm. Dummy because they won't be fully
+            // functional (won't have proper Client ID & Client Secret defined). But that doesn't matter for this particular test. What
+            // matters is if they are visible (clickable) on the LoginUsernameOnlyPage once the page is loaded
+            for (SocialLoginTest.Provider provider : Arrays.asList(GITHUB, GITLAB, GOOGLE)) {
+                adminClient.realm(testRealm).identityProviders().create(socialLoginTest.buildIdp(provider));
+
+                loginUsernameOnlyPage.open();
+                loginUsernameOnlyPage.assertCurrent();
+                // For each of the testing social providers, check the particular social provider button is present on the UsernameForm
+                // Test succeeded if NoSuchElementException is thrown for none of them
+                loginUsernameOnlyPage.findSocialButton(provider.id());
+            }
+
+        // Test cleanup - Return back to the initial state
+        } finally {
+            // Drop the testing social providers previously created within the test
+            for (IdentityProviderRepresentation providerRepresentation : adminClient.realm(testRealm).identityProviders().findAll()) {
+                adminClient.realm(testRealm).identityProviders().get(providerRepresentation.getInternalId()).remove();
+            }
+            // Reset Authentication flow back to the default Browser flow one
+            testingClient.server(testRealm).run(setBrowserFlowToRealm());
         }
     }
 
