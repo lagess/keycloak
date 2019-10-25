@@ -982,7 +982,7 @@ public class SamlService extends AuthorizationEndpointBase {
         }
         //Sign document if necessary, necessary to do this here, as the "inResponseTo" can only be set at this point
         SamlClient samlClient = new SamlClient(client);
-        JaxrsSAML2BindingBuilder bindingBuilder = new JaxrsSAML2BindingBuilder();
+        JaxrsSAML2BindingBuilder bindingBuilder = new JaxrsSAML2BindingBuilder(session);
         if (samlClient.requiresRealmSignature()) {
             KeyManager keyManager = session.keys();
             KeyManager.ActiveRsaKey keys = keyManager.getActiveRsaKey(realm);
