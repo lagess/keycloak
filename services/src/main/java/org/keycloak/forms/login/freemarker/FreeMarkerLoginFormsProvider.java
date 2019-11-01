@@ -193,11 +193,7 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
         if (status != null) {
             attributes.put("statusCode", status.getStatusCode());
         }
-
-        attributes.put("auth", new AuthenticationContextBean(context, actionUri));
-        attributes.put(Constants.EXECUTION, execution);
-
-
+        
         if (authenticationSession != null && authenticationSession.getClientNote(IS_AIA_REQUEST) != null) {
             attributes.put("isAppInitiatedAction", true);
         }
@@ -240,7 +236,7 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
 
         return processTemplate(theme, Templates.getTemplate(page), locale);
     }
-
+    
     @Override
     public Response createForm(String form) {
         Theme theme;
@@ -409,7 +405,8 @@ public class FreeMarkerLoginFormsProvider implements LoginFormsProvider {
 
             attributes.put("url", new UrlBean(realm, theme, baseUri, this.actionUri));
             attributes.put("requiredActionUrl", new RequiredActionUrlFormatterMethod(realm, baseUri));
-
+            attributes.put("auth", new AuthenticationContextBean(context, actionUri));
+            attributes.put(Constants.EXECUTION, execution);
 
             if (realm.isInternationalizationEnabled()) {
                 UriBuilder b;
