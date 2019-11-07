@@ -42,7 +42,9 @@ import org.keycloak.testsuite.runonserver.RunOnServerDeployment;
 import org.keycloak.testsuite.util.FlowUtil;
 import org.keycloak.testsuite.util.OAuthClient;
 import org.keycloak.testsuite.util.URLUtils;
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 
 import java.util.Arrays;
 import java.util.List;
@@ -418,6 +420,35 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
         }
     }
 
+    @Test
+    public void testAlternativeNonInteractiveExecutorInSubflow() {
+        final String newFlowAlias = "browser - alternative non-interactive executor";
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session).copyBrowserFlow(newFlowAlias));
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session)
+                .selectFlow(newFlowAlias)
+                .inForms(forms -> forms
+                        .clear()
+                        .addAuthenticatorExecution(AuthenticationExecutionModel.Requirement.REQUIRED, UsernameFormFactory.PROVIDER_ID)
+                        .addSubFlowExecution(Requirement.REQUIRED, reqSubFlow -> reqSubFlow
+                                .addAuthenticatorExecution(Requirement.ALTERNATIVE, PassThroughAuthenticator.PROVIDER_ID)
+                        )
+                )
+                .defineAsBrowserFlow()
+        );
+
+        try {
+            // provides username
+            loginUsernameOnlyPage.open();
+            loginUsernameOnlyPage.login("test-user@localhost");
+
+            // Check that Keycloak is redirecting us to the Keycloak account management page
+            WebElement aHref = driver.findElement(By.tagName("a"));
+            driver.get(aHref.getAttribute("href"));
+            Assert.assertEquals("Keycloak Account Management", driver.getTitle());
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+        }
+    }
 
     @Test
     public void testBackButtonFromAlternativeSubflow() {
@@ -432,7 +463,7 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
                                 // Add authenticators to this flow: 1 PASSWORD, 2 Another subflow with having only OTP as child
                                 .addAuthenticatorExecution(Requirement.ALTERNATIVE, PasswordFormFactory.PROVIDER_ID)
                                 .addSubFlowExecution("otp subflow", AuthenticationFlow.BASIC_FLOW, Requirement.ALTERNATIVE, altSubFlow -> altSubFlow
-                                    .addAuthenticatorExecution(Requirement.REQUIRED, OTPFormAuthenticatorFactory.PROVIDER_ID)
+                                        .addAuthenticatorExecution(Requirement.REQUIRED, OTPFormAuthenticatorFactory.PROVIDER_ID)
                                 )
                         )
                 )
