@@ -1707,7 +1707,11 @@ public class RepresentationToModel {
         }
         if (userRep.getRequiredActions() != null) {
             for (String requiredAction : userRep.getRequiredActions()) {
-                user.addRequiredAction(UserModel.RequiredAction.valueOf(requiredAction.toUpperCase()));
+                try {
+                    user.addRequiredAction(UserModel.RequiredAction.valueOf(requiredAction.toUpperCase()));
+                } catch (IllegalArgumentException iae) {
+                    user.addRequiredAction(requiredAction);
+                }
             }
         }
         createCredentials(userRep, session, newRealm, user, false);
