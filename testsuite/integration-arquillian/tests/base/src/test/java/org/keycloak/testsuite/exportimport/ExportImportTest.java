@@ -23,10 +23,13 @@ import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.After;
 import org.junit.Test;
 import org.keycloak.admin.client.resource.RealmResource;
+import org.keycloak.authentication.requiredactions.WebAuthnRegister;
+import org.keycloak.authentication.requiredactions.WebAuthnRegisterFactory;
 import org.keycloak.exportimport.ExportImportConfig;
 import org.keycloak.exportimport.dir.DirExportProvider;
 import org.keycloak.exportimport.dir.DirExportProviderFactory;
 import org.keycloak.exportimport.singlefile.SingleFileExportProviderFactory;
+import org.keycloak.models.UserModel;
 import org.keycloak.representations.idm.*;
 import org.keycloak.testsuite.AbstractKeycloakTest;
 import org.keycloak.testsuite.Assert;
@@ -42,6 +45,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.keycloak.testsuite.admin.AbstractAdminTest.loadJson;
 
 /**
@@ -63,6 +67,23 @@ public class ExportImportTest extends AbstractKeycloakTest {
         testRealm1.getUsers().add(makeUser("user1"));
         testRealm1.getUsers().add(makeUser("user2"));
         testRealm1.getUsers().add(makeUser("user3"));
+
+        testRealm1.getUsers().add(
+                UserBuilder.create()
+                        .username("user-requiredOTP")
+                        .email("User-requiredOTP" + "@test.com")
+                        .password("password")
+                        .requiredAction(UserModel.RequiredAction.CONFIGURE_TOTP.name())
+                        .build()
+        );
+        testRealm1.getUsers().add(
+                UserBuilder.create()
+                        .username("user-requiredWebAuthn")
+                        .email("User-requiredWebAuthn" + "@test.com")
+                        .password("password")
+                        .requiredAction(WebAuthnRegisterFactory.PROVIDER_ID)
+                        .build()
+        );
 
         testRealm1.getSmtpServer().put("password", "secret");
 
@@ -237,6 +258,9 @@ public class ExportImportTest extends AbstractKeycloakTest {
         assertNotAuthenticated("test", "user1", "password");
         assertNotAuthenticated("test", "user2", "password");
         assertNotAuthenticated("test", "user3", "password");
+        assertNotAuthenticated("test", "user-requiredOTP", "password");
+        assertNotAuthenticated("test", "user-requiredWebAuthn", "password");
+
 
         // Configure import
         testingClient.testing().exportImport().setAction(ExportImportConfig.ACTION_IMPORT);
@@ -250,6 +274,14 @@ public class ExportImportTest extends AbstractKeycloakTest {
         assertAuthenticated("test", "user1", "password");
         assertAuthenticated("test", "user2", "password");
         assertAuthenticated("test", "user3", "password");
+        assertAuthenticated("test", "user-requiredOTP", "password");
+        assertAuthenticated("test", "user-requiredWebAuthn", "password");
+
+        RealmResource testRealmRealm = adminClient.realm("test");
+        assertTrue(testRealmRealm.users().search("user-requiredOTP").get(0)
+                .getRequiredActions().get(0).equals(UserModel.RequiredAction.CONFIGURE_TOTP.name()));
+        assertTrue(testRealmRealm.users().search("user-requiredWebAuthn").get(0)
+                .getRequiredActions().get(0).equals(WebAuthnRegisterFactory.PROVIDER_ID));
 
         // KEYCLOAK-6050 Check SMTP password is exported/imported
         assertEquals("secret", testingClient.server("test").fetch(RunHelpers.internalRealm()).getSmtpServer().get("password"));
@@ -288,6 +320,8 @@ public class ExportImportTest extends AbstractKeycloakTest {
         assertNotAuthenticated("test", "user1", "password");
         assertNotAuthenticated("test", "user2", "password");
         assertNotAuthenticated("test", "user3", "password");
+        assertNotAuthenticated("test", "user-requiredOTP", "password");
+        assertNotAuthenticated("test", "user-requiredWebAuthn", "password");
 
         // Configure import
         testingClient.testing().exportImport().setAction(ExportImportConfig.ACTION_IMPORT);
@@ -301,6 +335,15 @@ public class ExportImportTest extends AbstractKeycloakTest {
         assertAuthenticated("test", "user1", "password");
         assertAuthenticated("test", "user2", "password");
         assertAuthenticated("test", "user3", "password");
+        assertAuthenticated("test", "user-requiredOTP", "password");
+        assertAuthenticated("test", "user-requiredWebAuthn", "password");
+
+        RealmResource testRealmRealm = adminClient.realm("test");
+        assertTrue(testRealmRealm.users().search("user-requiredOTP").get(0)
+                .getRequiredActions().get(0).equals(UserModel.RequiredAction.CONFIGURE_TOTP.name()));
+        assertTrue(testRealmRealm.users().search("user-requiredWebAuthn").get(0)
+                .getRequiredActions().get(0).equals(WebAuthnRegisterFactory.PROVIDER_ID));
+
 
         List<ComponentRepresentation> componentsImported = adminClient.realm("test").components().query();
         assertComponents(components, componentsImported);
