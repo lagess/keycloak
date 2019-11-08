@@ -931,7 +931,7 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
     /**
      * This flow contains:
      * UsernamePasswordForm REQUIRED
-     * OTPForm REQUIRED
+     * WebAuthn REQUIRED
      *
      * @param newFlowAlias
      */
