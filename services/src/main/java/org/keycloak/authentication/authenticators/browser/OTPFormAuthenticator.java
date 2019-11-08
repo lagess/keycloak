@@ -21,6 +21,9 @@ import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.CredentialValidator;
+import org.keycloak.authentication.RequiredActionFactory;
+import org.keycloak.authentication.RequiredActionProvider;
+import org.keycloak.authentication.requiredactions.UpdateTotp;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.credential.OTPCredentialProvider;
 import org.keycloak.events.Errors;
@@ -33,6 +36,8 @@ import org.keycloak.services.messages.Messages;
 
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -117,6 +122,10 @@ public class OTPFormAuthenticator extends AbstractUsernameFormAuthenticator impl
         if (!user.getRequiredActions().contains(UserModel.RequiredAction.CONFIGURE_TOTP.name())) {
             user.addRequiredAction(UserModel.RequiredAction.CONFIGURE_TOTP.name());
         }
+    }
+
+    public List<RequiredActionFactory> getRequiredActions(KeycloakSession session) {
+        return Collections.singletonList((UpdateTotp)session.getKeycloakSessionFactory().getProviderFactory(RequiredActionProvider.class, UserModel.RequiredAction.CONFIGURE_TOTP.name()));
     }
 
     @Override

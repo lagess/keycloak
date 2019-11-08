@@ -28,6 +28,10 @@ import org.keycloak.WebAuthnConstants;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
+import org.keycloak.authentication.RequiredActionFactory;
+import org.keycloak.authentication.RequiredActionProvider;
+import org.keycloak.authentication.requiredactions.UpdateTotp;
+import org.keycloak.authentication.requiredactions.WebAuthnRegister;
 import org.keycloak.authentication.requiredactions.WebAuthnRegisterFactory;
 import org.keycloak.common.util.Base64Url;
 import org.keycloak.common.util.UriUtils;
@@ -42,6 +46,8 @@ import org.keycloak.models.credential.WebAuthnCredentialModel;
 
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
+import java.util.Collections;
+import java.util.List;
 
 public class WebAuthnAuthenticator implements Authenticator {
 
@@ -190,6 +196,10 @@ public class WebAuthnAuthenticator implements Authenticator {
         if (!user.getRequiredActions().contains(WebAuthnRegisterFactory.PROVIDER_ID)) {
             user.addRequiredAction(WebAuthnRegisterFactory.PROVIDER_ID);
         }
+    }
+
+    public List<RequiredActionFactory> getRequiredActions(KeycloakSession session) {
+        return Collections.singletonList((WebAuthnRegisterFactory)session.getKeycloakSessionFactory().getProviderFactory(RequiredActionProvider.class, WebAuthnRegisterFactory.PROVIDER_ID));
     }
 
     public void close() {

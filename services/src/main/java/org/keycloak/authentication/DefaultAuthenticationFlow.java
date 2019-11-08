@@ -36,6 +36,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -278,13 +279,12 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
         logger.debug("processFlow");
 
         //separate flow elements into required and alternative elements
-        List<AuthenticationExecutionModel> conditionalList = new ArrayList<>();
         List<AuthenticationExecutionModel> requiredList = new ArrayList<>();
         List<AuthenticationExecutionModel> alternativeList = new ArrayList<>();
 
         for (AuthenticationExecutionModel execution : executions) {
             if (isConditionalAuthenticator(execution)) {
-                conditionalList.add(execution);
+                continue;
             } else if (execution.isRequired() || execution.isConditional()) {
                 requiredList.add(execution);
             } else if (execution.isAlternative()) {
@@ -292,17 +292,16 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
             }
         }
 
-        // Conditionals should be executed without considering SUCCESS/FAILED status
-        // If condition is matched, the execution of the flow goes on
-        // If condition is not matched, simply stop processing this flow and go on processing parent flow
-        if (flowIsConditional() && (conditionalList.isEmpty() || conditionalList.stream().anyMatch(this::conditionalNotMatched))) {
-            successful = true;
-            return null;
-        }
-
         //handle required elements : all required elements need to be executed
         boolean requiredElementsSuccessful = true;
-        for (AuthenticationExecutionModel required : requiredList) {
+        Iterator<AuthenticationExecutionModel> requiredIListIterator = requiredList.listIterator();
+        while (requiredIListIterator.hasNext()) {
+            AuthenticationExecutionModel required = requiredIListIterator.next();
+            //Conditional flows must be considered disabled (non-existent) if their condition evaluates to false.
+            if (required.isConditional() && isConditionalSubflowDisabled(required)) {
+                requiredIListIterator.remove();
+                continue;
+            }
             Response response = processSingleFlowExecutionModel(required, null, true);
             requiredElementsSuccessful &= processor.isSuccessful(required) || isSetupRequired(required);
             if (response != null) {
@@ -310,7 +309,7 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
             }
         }
 
-        //Evaluate alternative elements only if there are no required elements
+        //Evaluate alternative elements only if there are no required elements. This may also occur if there was only condition elements
         if (requiredList.isEmpty()) {
             //check if an alternative is already successful, in case we are returning in the flow after an action
             if (alternativeList.stream().anyMatch(alternative -> processor.isSuccessful(alternative) || isSetupRequired(alternative))) {
@@ -341,9 +340,20 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
         return null;
     }
 
-    private boolean flowIsConditional() {
-        AuthenticationExecutionModel flowModel = processor.getRealm().getAuthenticationExecutionByFlowId(flow.getId());
-        return flowModel != null && flowModel.isConditional();
+    /**
+     * Checks if the conditional subflow passed in parameter is disabled.
+     * @param model
+     * @return
+     */
+    private boolean isConditionalSubflowDisabled(AuthenticationExecutionModel model) {
+        if (model == null || !model.isAuthenticatorFlow() || !model.isConditional()) {
+            return false;
+        };
+        List<AuthenticationExecutionModel> modelList = processor.getRealm().getAuthenticationExecutions(model.getFlowId());
+        List<AuthenticationExecutionModel> conditionalAuthenticatorList = modelList.stream()
+                .filter(this::isConditionalAuthenticator)
+                .collect(Collectors.toList());
+        return conditionalAuthenticatorList.isEmpty() || conditionalAuthenticatorList.stream().anyMatch(m-> conditionalNotMatched(m, modelList));
     }
 
     private boolean isConditionalAuthenticator(AuthenticationExecutionModel model) {
@@ -358,10 +368,10 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
         return factory;
     }
 
-    private boolean conditionalNotMatched(AuthenticationExecutionModel model) {
+    private boolean conditionalNotMatched(AuthenticationExecutionModel model, List<AuthenticationExecutionModel> executionList) {
         AuthenticatorFactory factory = getAuthenticatorFactory(model);
         ConditionalBlockAuthenticator authenticator = (ConditionalBlockAuthenticator) createAuthenticator(factory);
-        AuthenticationProcessor.Result context = processor.createAuthenticatorContext(model, authenticator, executions);
+        AuthenticationProcessor.Result context = processor.createAuthenticatorContext(model, authenticator, executionList);
 
         return !authenticator.matchCondition(context);
     }
@@ -404,7 +414,12 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
         //If executions are alternative, get the actual execution to show based on user preference
         List<AuthenticationSelectionOption> selectionOptions = createAuthenticationSelectionList(model);
         if (!selectionOptions.isEmpty() && calledFromFlow) {
-            model = selectionOptions.stream().filter(aso -> !aso.getAuthenticationExecution().isAuthenticatorFlow() && !isProcessed(aso.getAuthenticationExecution())).findFirst().get().getAuthenticationExecution();
+            List<AuthenticationSelectionOption> finalSelectionOptions = selectionOptions.stream().filter(aso -> !aso.getAuthenticationExecution().isAuthenticatorFlow() && !isProcessed(aso.getAuthenticationExecution())).collect(Collectors.toList());;
+            if (finalSelectionOptions.isEmpty()) {
+                //move to next
+                return null;
+            }
+            model = finalSelectionOptions.get(0).getAuthenticationExecution();
             factory = (AuthenticatorFactory) processor.getSession().getKeycloakSessionFactory().getProviderFactory(Authenticator.class, model.getAuthenticator());
             if (factory == null) {
                 throw new RuntimeException("Unable to find factory for AuthenticatorFactory: " + model.getAuthenticator() + " did you forget to declare it in a META-INF/services file?");
@@ -423,7 +438,7 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
                 throw new AuthenticationFlowException("authenticator: " + factory.getId(), AuthenticationFlowError.UNKNOWN_USER);
             }
             if (!authenticator.configuredFor(processor.getSession(), processor.getRealm(), authUser)) {
-                if (factory.isUserSetupAllowed()) {
+                if (factory.isUserSetupAllowed() && model.isRequired() && authenticator.areRequiredActionsEnabled(processor.getSession(), processor.getRealm())) {
                     //This means that having even though the user didn't validate the
                     logger.debugv("authenticator SETUP_REQUIRED: {0}", factory.getId());
                     processor.getAuthenticationSession().setExecutionStatus(model.getId(), AuthenticationSessionModel.ExecutionStatus.SETUP_REQUIRED);

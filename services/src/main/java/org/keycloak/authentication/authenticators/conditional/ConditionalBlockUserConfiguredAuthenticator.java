@@ -27,8 +27,21 @@ public class ConditionalBlockUserConfiguredAuthenticator implements ConditionalB
         List<AuthenticationExecutionModel> requiredExecutions = new ArrayList<>();
         List<AuthenticationExecutionModel> alternativeExecutions = new ArrayList<>();
         executions.forEach(e -> {
-            if (!context.getExecution().getId().equals(e.getId())) {
-                if (e.isRequired() || e.isConditional()) {
+            //Check if the execution's authenticator is a conditional authenticator, as they must not be evaluated here.
+            boolean isConditionalAuthenticator = false;
+            try {
+                AuthenticatorFactory factory = (AuthenticatorFactory) context.getSession().getKeycloakSessionFactory().getProviderFactory(Authenticator.class, e.getAuthenticator());
+                if (factory != null) {
+                    Authenticator auth = factory.create(context.getSession());
+                    if (auth != null && auth instanceof ConditionalBlockAuthenticator) {
+                        isConditionalAuthenticator = true;
+                    }
+                }
+            } catch (Exception exception) {
+                //don't need to catch this
+            }
+            if (!context.getExecution().getId().equals(e.getId()) && !e.isAuthenticatorFlow() && !isConditionalAuthenticator) {
+                if (e.isRequired()) {
                     requiredExecutions.add(e);
                 } else if (e.isAlternative()) {
                     alternativeExecutions.add(e);
