@@ -9,8 +9,8 @@ import org.keycloak.models.UserModel;
 
 import java.util.Set;
 
-public class ConditionalBlockRoleAuthenticator implements ConditionalBlockAuthenticator {
-    public static final ConditionalBlockRoleAuthenticator SINGLETON = new ConditionalBlockRoleAuthenticator();
+public class ConditionalRoleAuthenticator implements ConditionalAuthenticator {
+    public static final ConditionalRoleAuthenticator SINGLETON = new ConditionalRoleAuthenticator();
 
     @Override
     public boolean matchCondition(AuthenticationFlowContext context) {
@@ -18,7 +18,7 @@ public class ConditionalBlockRoleAuthenticator implements ConditionalBlockAuthen
         AuthenticatorConfigModel authConfig = context.getAuthenticatorConfig();
         if (user != null && authConfig!=null && authConfig.getConfig()!=null) {
             Set<RoleModel> roles = user.getRoleMappings();
-            String requiredRole = authConfig.getConfig().get(ConditionalBlockRoleAuthenticatorFactory.CONDITIONAL_USER_ROLE);
+            String requiredRole = authConfig.getConfig().get(ConditionalRoleAuthenticatorFactory.CONDITIONAL_USER_ROLE);
             return roles.stream().anyMatch(r -> r.getName().equals(requiredRole));
         }
         return false;

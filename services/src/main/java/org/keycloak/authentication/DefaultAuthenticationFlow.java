@@ -19,7 +19,7 @@ package org.keycloak.authentication;
 
 import org.jboss.logging.Logger;
 import org.keycloak.OAuth2Constants;
-import org.keycloak.authentication.authenticators.conditional.ConditionalBlockAuthenticator;
+import org.keycloak.authentication.authenticators.conditional.ConditionalAuthenticator;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticationFlowModel;
@@ -357,7 +357,7 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
     }
 
     private boolean isConditionalAuthenticator(AuthenticationExecutionModel model) {
-        return !model.isAuthenticatorFlow() && model.getAuthenticator() != null && createAuthenticator(getAuthenticatorFactory(model)) instanceof ConditionalBlockAuthenticator;
+        return !model.isAuthenticatorFlow() && model.getAuthenticator() != null && createAuthenticator(getAuthenticatorFactory(model)) instanceof ConditionalAuthenticator;
     }
 
     private AuthenticatorFactory getAuthenticatorFactory(AuthenticationExecutionModel model) {
@@ -370,7 +370,7 @@ public class DefaultAuthenticationFlow implements AuthenticationFlow {
 
     private boolean conditionalNotMatched(AuthenticationExecutionModel model, List<AuthenticationExecutionModel> executionList) {
         AuthenticatorFactory factory = getAuthenticatorFactory(model);
-        ConditionalBlockAuthenticator authenticator = (ConditionalBlockAuthenticator) createAuthenticator(factory);
+        ConditionalAuthenticator authenticator = (ConditionalAuthenticator) createAuthenticator(factory);
         AuthenticationProcessor.Result context = processor.createAuthenticatorContext(model, authenticator, executionList);
 
         return !authenticator.matchCondition(context);

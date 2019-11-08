@@ -4,10 +4,9 @@ import org.keycloak.OAuth2Constants;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.AuthenticatorFactory;
 import org.keycloak.authentication.DisplayTypeAuthenticatorFactory;
-import org.keycloak.authentication.authenticators.AttemptedAuthenticator;
 import org.keycloak.models.KeycloakSession;
 
-public interface ConditionalBlockAuthenticatorFactory extends AuthenticatorFactory, DisplayTypeAuthenticatorFactory {
+public interface ConditionalAuthenticatorFactory extends AuthenticatorFactory, DisplayTypeAuthenticatorFactory {
 
     @Override
     default Authenticator create(KeycloakSession session) {
@@ -21,6 +20,6 @@ public interface ConditionalBlockAuthenticatorFactory extends AuthenticatorFacto
         return getSingleton();
     }
 
-    ConditionalBlockAuthenticator getSingleton();
+    ConditionalAuthenticator getSingleton();
 
 }

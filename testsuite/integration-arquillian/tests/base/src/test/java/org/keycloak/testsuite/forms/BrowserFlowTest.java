@@ -11,15 +11,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.authentication.AuthenticationFlow;
-import org.keycloak.authentication.RequiredActionFactory;
 import org.keycloak.authentication.authenticators.browser.OTPFormAuthenticatorFactory;
 import org.keycloak.authentication.authenticators.browser.PasswordFormFactory;
 import org.keycloak.authentication.authenticators.browser.UsernameFormFactory;
 import org.keycloak.authentication.authenticators.browser.UsernamePasswordFormFactory;
 import org.keycloak.authentication.authenticators.browser.WebAuthnAuthenticatorFactory;
-import org.keycloak.authentication.authenticators.conditional.ConditionalBlockRoleAuthenticatorFactory;
-import org.keycloak.authentication.authenticators.conditional.ConditionalBlockUserConfiguredAuthenticator;
-import org.keycloak.authentication.authenticators.conditional.ConditionalBlockUserConfiguredAuthenticatorFactory;
+import org.keycloak.authentication.authenticators.conditional.ConditionalRoleAuthenticatorFactory;
+import org.keycloak.authentication.authenticators.conditional.ConditionalUserConfiguredAuthenticatorFactory;
 import org.keycloak.authentication.requiredactions.WebAuthnRegisterFactory;
 import org.keycloak.events.Details;
 import org.keycloak.models.AuthenticationExecutionModel;
@@ -37,7 +35,6 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
 import org.keycloak.testsuite.ActionURIUtils;
 import org.keycloak.testsuite.AssertEvents;
-import org.keycloak.testsuite.auth.page.login.OTPSetup;
 import org.keycloak.testsuite.auth.page.login.OneTimeCode;
 import org.keycloak.testsuite.broker.SocialLoginTest;
 import org.keycloak.testsuite.client.KeycloakTestingClient;
@@ -314,8 +311,8 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
                         .clear()
                         .addAuthenticatorExecution(AuthenticationExecutionModel.Requirement.REQUIRED, UsernameFormFactory.PROVIDER_ID)
                         .addSubFlowExecution(Requirement.CONDITIONAL, altSubFlow -> altSubFlow
-                                // Add authenticators to this flow: 1 conditional block and 2 basic authenticator executions
-                                .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalBlockUserConfiguredAuthenticatorFactory.PROVIDER_ID)
+                                // Add authenticators to this flow: 1 conditional authenticator and 2 basic authenticator executions
+                                .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalUserConfiguredAuthenticatorFactory.PROVIDER_ID)
                                 .addAuthenticatorExecution(Requirement.ALTERNATIVE, PasswordFormFactory.PROVIDER_ID)
                                 .addAuthenticatorExecution(Requirement.ALTERNATIVE, OTPFormAuthenticatorFactory.PROVIDER_ID)
                         )
@@ -333,14 +330,14 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
         return passwordPage.isCurrent();
     }
 
-    // A conditional flow without conditional block should automatically be disabled
+    // A conditional flow without conditional authenticator should automatically be disabled
     @Test
-    public void testFlowDisabledWhenConditionalBlockIsMissing() {
+    public void testFlowDisabledWhenConditionalAuthenticatorIsMissing() {
         try {
-            configureBrowserFlowWithConditionalSubFlowHavingConditionalBlock("browser - non missing conditional block", true);
+            configureBrowserFlowWithConditionalSubFlowHavingConditionalAuthenticator("browser - non missing conditional authenticator", true);
             Assert.assertTrue(needsPassword("user-with-two-configured-otp"));
 
-            configureBrowserFlowWithConditionalSubFlowHavingConditionalBlock("browser - missing conditional block", false);
+            configureBrowserFlowWithConditionalSubFlowHavingConditionalAuthenticator("browser - missing conditional authenticator", false);
             // Flow is conditional but it is missing a conditional authentication executor
             // The whole flow is disabled
             Assert.assertFalse(needsPassword("user-with-two-configured-otp"));
@@ -349,7 +346,7 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
         }
     }
 
-    private void configureBrowserFlowWithConditionalSubFlowHavingConditionalBlock(String newFlowAlias, boolean conditionFlowHasConditionalBlock) {
+    private void configureBrowserFlowWithConditionalSubFlowHavingConditionalAuthenticator(String newFlowAlias, boolean conditionFlowHasConditionalAuthenticator) {
         testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session).copyBrowserFlow(newFlowAlias));
         testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session)
                 .selectFlow(newFlowAlias)
@@ -357,9 +354,9 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
                         .clear()
                         .addAuthenticatorExecution(Requirement.REQUIRED, UsernameFormFactory.PROVIDER_ID)
                         .addSubFlowExecution(Requirement.CONDITIONAL, subFlow -> {
-                            if (conditionFlowHasConditionalBlock) {
-                                // Add authenticators to this flow: 1 conditional block and a basic authenticator executions
-                                subFlow.addAuthenticatorExecution(Requirement.REQUIRED, ConditionalBlockUserConfiguredAuthenticatorFactory.PROVIDER_ID);
+                            if (conditionFlowHasConditionalAuthenticator) {
+                                // Add authenticators to this flow: 1 conditional authenticator and a basic authenticator executions
+                                subFlow.addAuthenticatorExecution(Requirement.REQUIRED, ConditionalUserConfiguredAuthenticatorFactory.PROVIDER_ID);
                             }
                             // Update the browser forms only with a UsernameForm
                             subFlow.addAuthenticatorExecution(Requirement.REQUIRED, PasswordFormFactory.PROVIDER_ID);
@@ -368,18 +365,18 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
         );
     }
 
-    // Configure a conditional block in a non-conditional sub-flow
-    // In such case, the flow is evaluated and the conditional block is considered as disabled
+    // Configure a conditional authenticator in a non-conditional sub-flow
+    // In such case, the flow is evaluated and the conditional authenticator is considered as disabled
     @Test
-    public void testConditionalBlockInNonConditionalFlow() {
+    public void testConditionalAuthenticatorInNonConditionalFlow() {
         try {
-            configureBrowserFlowWithConditionalBlockInNonConditionalFlow();
+            configureBrowserFlowWithConditionalAuthenticatorInNonConditionalFlow();
 
             // provides username
             loginUsernameOnlyPage.open();
             loginUsernameOnlyPage.login("user-with-two-configured-otp");
 
-            // if flow was conditional, the conditional block would disable the flow because no user have the expected role
+            // if flow was conditional, the conditional authenticator would disable the flow because no user have the expected role
             // Here, the password form is shown: it shows that the executor of the conditional bloc has been disabled. Other
             // executors of this flow are executed anyway
             passwordPage.assertCurrent();
@@ -388,7 +385,7 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
         }
     }
 
-    private void configureBrowserFlowWithConditionalBlockInNonConditionalFlow() {
+    private void configureBrowserFlowWithConditionalAuthenticatorInNonConditionalFlow() {
         String newFlowAlias = "browser - nonconditional";
         String requiredRole = "non-existing-role";
         testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session).copyBrowserFlow(newFlowAlias));
@@ -398,8 +395,8 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
                         .clear()
                         .addAuthenticatorExecution(Requirement.REQUIRED, UsernameFormFactory.PROVIDER_ID)
                         .addSubFlowExecution(Requirement.REQUIRED, subFlow -> subFlow
-                                // Add authenticators to this flow: 1 conditional block and a basic authenticator executions
-                                .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalBlockRoleAuthenticatorFactory.PROVIDER_ID,
+                                // Add authenticators to this flow: 1 conditional authenticator and a basic authenticator executions
+                                .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalRoleAuthenticatorFactory.PROVIDER_ID,
                                         config -> config.getConfig().put("condUserRole", requiredRole))
                                 .addAuthenticatorExecution(Requirement.REQUIRED, PasswordFormFactory.PROVIDER_ID)
                         )
@@ -408,12 +405,12 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
         );
     }
 
-    // Check the ConditionalBlockRoleAuthenticator
+    // Check the ConditionalRoleAuthenticator
     // Configure a conditional subflow with the required role "user" and an OTP authenticator
     // user-with-two-configured-otp has the "user" role and should be asked for an OTP code
     // user-with-one-configured-otp does not have the role. He should not be asked for an OTP code
     @Test
-    public void testConditionalBlockRoleAuthenticator() {
+    public void testConditionalRoleAuthenticator() {
         String requiredRole = "user";
         // A browser flow is configured with an OTPForm for users having the role "user"
         configureBrowserFlowOTPNeedsRole(requiredRole);
@@ -518,7 +515,7 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
                         // Update the browser forms with a UsernamePasswordForm
                         .addAuthenticatorExecution(Requirement.REQUIRED, UsernamePasswordFormFactory.PROVIDER_ID)
                         .addSubFlowExecution(Requirement.CONDITIONAL, subFlow -> subFlow
-                                .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalBlockRoleAuthenticatorFactory.PROVIDER_ID,
+                                .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalRoleAuthenticatorFactory.PROVIDER_ID,
                                         config -> config.getConfig().put("condUserRole", requiredRole))
                                 .addAuthenticatorExecution(Requirement.REQUIRED, OTPFormAuthenticatorFactory.PROVIDER_ID)
                         )
@@ -619,7 +616,7 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
     }
 
     @Test
-    public void testConditionalFlowWithBlockEvaluatingToFalseActsAsDisabled(){
+    public void testConditionalFlowWithConditionalAuthenticatorEvaluatingToFalseActsAsDisabled(){
         String newFlowAlias = "browser - copy 1";
         configureBrowserFlowWithConditionalFlowWithOTP(newFlowAlias);
 
@@ -637,7 +634,7 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
     }
 
     @Test
-    public void testConditionalFlowWithBlockEvaluatingToTrueActsAsRequired(){
+    public void testConditionalFlowWithConditionalAuthenticatorEvaluatingToTrueActsAsRequired(){
         String newFlowAlias = "browser - copy 1";
         configureBrowserFlowWithConditionalFlowWithOTP(newFlowAlias);
 
@@ -683,7 +680,7 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
                         .addAuthenticatorExecution(AuthenticationExecutionModel.Requirement.REQUIRED, UsernameFormFactory.PROVIDER_ID)
                         .addSubFlowExecution(Requirement.REQUIRED, sf -> sf
                                 .addSubFlowExecution(Requirement.CONDITIONAL, subFlow -> subFlow
-                                        .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalBlockUserConfiguredAuthenticatorFactory.PROVIDER_ID)
+                                        .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalUserConfiguredAuthenticatorFactory.PROVIDER_ID)
                                         .addAuthenticatorExecution(Requirement.REQUIRED, OTPFormAuthenticatorFactory.PROVIDER_ID)
                                 )
                         )
@@ -763,7 +760,7 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
      * The expected behaviour is the following:
      * - If the user is in the "user" group and has an OTP credential -> he sees the OTP form
      * - Otherwise the user logs in directly
-     * This is important, because the ConditionalBlockRoleAuthenticator must not count towards the check from the ConditionalBlockUserConfiguredAuthenticator
+     * This is important, because the ConditionalRoleAuthenticator must not count towards the check from the ConditionalUserConfiguredAuthenticator
      * The sub-subflow is present in the conditional flow to show that it is ignored by the ConditionalUserConfiguredAuthenticator (as it would raise an exception otherwise)
      * @param newFlowAlias
      */
@@ -775,8 +772,8 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
                                 .clear()
                                 .addAuthenticatorExecution(Requirement.REQUIRED, UsernamePasswordFormFactory.PROVIDER_ID)
                                 .addSubFlowExecution(Requirement.CONDITIONAL, subFlow -> subFlow
-                                        .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalBlockUserConfiguredAuthenticatorFactory.PROVIDER_ID)
-                                        .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalBlockRoleAuthenticatorFactory.PROVIDER_ID,
+                                        .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalUserConfiguredAuthenticatorFactory.PROVIDER_ID)
+                                        .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalRoleAuthenticatorFactory.PROVIDER_ID,
                                                 config -> config.getConfig().put("condUserRole", "user"))
                                         .addAuthenticatorExecution(Requirement.ALTERNATIVE, OTPFormAuthenticatorFactory.PROVIDER_ID)
                                         .addSubFlowExecution(Requirement.ALTERNATIVE, sf -> sf
