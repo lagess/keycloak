@@ -92,7 +92,13 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.keycloak.testsuite.Assert.assertNames;
 
 /**
@@ -141,7 +147,7 @@ public class UserTest extends AbstractAdminTest {
         UserRepresentation user = new UserRepresentation();
         user.setUsername(username);
         user.setEmail(email);
-        user.setRequiredActions(Collections.<String>emptyList());
+        user.setRequiredActions(Collections.emptyList());
         user.setEnabled(true);
 
         return createUser(user);
@@ -150,7 +156,7 @@ public class UserTest extends AbstractAdminTest {
     private String createUser(UserRepresentation userRep) {
         return createUser(userRep, true);
     }
-    
+
     private String createUser(UserRepresentation userRep, boolean assertAdminEvent) {
         Response response = realm.users().create(userRep);
         String createdId = ApiUtil.getCreatedId(response);
@@ -213,7 +219,7 @@ public class UserTest extends AbstractAdminTest {
 
         PasswordCredentialModel pcm = PasswordCredentialModel.createFromValues("my-algorithm", "theSalt".getBytes(), 22, "ABC");
         CredentialRepresentation hashedPassword = ModelToRepresentation.toRepresentation(pcm);
-        hashedPassword.setCreatedDate(1001l);
+        hashedPassword.setCreatedDate(1001L);
         hashedPassword.setUserLabel("deviceX");
         hashedPassword.setType(CredentialRepresentation.PASSWORD);
 
@@ -273,21 +279,21 @@ public class UserTest extends AbstractAdminTest {
         assertEquals("theSalt", new String(pcmh.getPasswordSecretData().getSalt()));
         assertEquals(CredentialRepresentation.PASSWORD, credentialHashed.getType());
     }
-    
+
     @Test
-    public void updateUserWithHashedCredentials(){
+    public void updateUserWithHashedCredentials() {
         String userId = createUser("user_hashed_creds", "user_hashed_creds@localhost");
 
-        byte[] salt = new byte[]{-69,85,87,99,26,-107,125,99,-77,30,-111,118,108,100,-117,-56};
+        byte[] salt = new byte[]{-69, 85, 87, 99, 26, -107, 125, 99, -77, 30, -111, 118, 108, 100, -117, -56};
 
         PasswordCredentialModel credentialModel = PasswordCredentialModel.createFromValues("pbkdf2-sha256", salt,
                 27500, "uskEPZWMr83pl2mzNB95SFXfIabe2UH9ClENVx/rrQqOjFEjL2aAOGpWsFNNF3qoll7Qht2mY5KxIDm3Rnve2w==");
         credentialModel.setCreatedDate(1001l);
         CredentialRepresentation hashedPassword = ModelToRepresentation.toRepresentation(credentialModel);
-        
+
         UserRepresentation userRepresentation = new UserRepresentation();
         userRepresentation.setCredentials(Collections.singletonList(hashedPassword));
-        
+
         realm.users().get(userId).update(userRepresentation);
 
         String accountUrl = RealmsResource.accountUrl(UriBuilder.fromUri(getAuthServerRoot())).build(REALM_NAME).toString();
@@ -393,7 +399,7 @@ public class UserTest extends AbstractAdminTest {
         assertAdminEvents.assertEmpty();
 
     }
-    
+
     // KEYCLOAK-7015
     @Test
     public void createTwoUsersWithEmptyStringEmails() {
@@ -1507,15 +1513,15 @@ public class UserTest extends AbstractAdminTest {
             assertThat(user.getAttributes(), Matchers.nullValue());
         }
     }
-    
+
     @Test
     public void testAccessUserFromOtherRealm() {
         RealmRepresentation firstRealm = new RealmRepresentation();
-        
+
         firstRealm.setRealm("first-realm");
-        
+
         adminClient.realms().create(firstRealm);
-        
+
         realm = adminClient.realm(firstRealm.getRealm());
         realmId = realm.toRepresentation().getId();
 
@@ -1523,7 +1529,7 @@ public class UserTest extends AbstractAdminTest {
 
         firstUser.setUsername("first");
         firstUser.setEmail("first@first-realm.org");
-        
+
         firstUser.setId(createUser(firstUser, false));
 
         RealmRepresentation secondRealm = new RealmRepresentation();
@@ -1569,19 +1575,85 @@ public class UserTest extends AbstractAdminTest {
         loginPage.login(userName, userPass);
         assertTrue("Test user should be successfully logged in.", driver.getTitle().contains("Account Management"));
         accountPage.logOut();
-        
-        Optional<CredentialRepresentation> passwordCredential = 
+
+        Optional<CredentialRepresentation> passwordCredential =
                 realm.users().get(userId).credentials().stream()
-                .filter(c -> CredentialRepresentation.PASSWORD.equals(c.getType()))
-                .findFirst();
+                        .filter(c -> CredentialRepresentation.PASSWORD.equals(c.getType()))
+                        .findFirst();
         assertTrue("Test user should have a password credential set.", passwordCredential.isPresent());
         realm.users().get(userId).removeCredential(passwordCredential.get().getId());
-        
+
         driver.navigate().to(accountUrl);
         assertEquals("Test user should be on the login page.", "Log In", PageUtils.getPageTitle(driver));
         loginPage.login(userName, userPass);
-        assertTrue("Test user should fail to log in after password was deleted.", 
+        assertTrue("Test user should fail to log in after password was deleted.",
                 driver.getCurrentUrl().contains(String.format("/realms/%s/login-actions/authenticate", REALM_NAME)));
     }
-    
+
+    @Test
+    public void testGetAndMoveCredentials() {
+        importTestRealms();
+
+        UserResource user = ApiUtil.findUserByUsernameId(testRealm(), "user-with-two-configured-otp");
+        List<CredentialRepresentation> creds = user.credentials();
+        List<String> expectedCredIds = Arrays.asList(creds.get(0).getId(), creds.get(1).getId(), creds.get(2).getId());
+
+        // Check actual user credentials
+        assertSameIds(expectedCredIds, user.credentials());
+
+        // Move first credential after second one
+        user.moveCredentialAfter(expectedCredIds.get(0), expectedCredIds.get(1));
+        List<String> newOrderCredIds = Arrays.asList(expectedCredIds.get(1), expectedCredIds.get(0), expectedCredIds.get(2));
+        assertSameIds(newOrderCredIds, user.credentials());
+
+        // Move last credential in first position
+        user.moveToFirst(expectedCredIds.get(2));
+        newOrderCredIds = Arrays.asList(expectedCredIds.get(2), expectedCredIds.get(1), expectedCredIds.get(0));
+        assertSameIds(newOrderCredIds, user.credentials());
+
+        // Restore initial state
+        user.moveToFirst(expectedCredIds.get(1));
+        user.moveToFirst(expectedCredIds.get(0));
+        assertSameIds(expectedCredIds, user.credentials());
+    }
+
+    private void assertSameIds(List<String> expectedIds, List<CredentialRepresentation> actual) {
+        Assert.assertEquals(expectedIds.size(), actual.size());
+        for (int i = 0; i < expectedIds.size(); i++) {
+            Assert.assertEquals(expectedIds.get(i), actual.get(i).getId());
+        }
+    }
+
+    @Test
+    public void testUpdateCredentials() {
+        importTestRealms();
+
+        // Get user user-with-one-configured-otp and assert he has no label linked to its OTP credential
+        UserResource user = ApiUtil.findUserByUsernameId(testRealm(), "user-with-one-configured-otp");
+        CredentialRepresentation otpCred = user.credentials().get(0);
+        Assert.assertNull(otpCred.getUserLabel());
+
+        // Set and check a new label
+        String newLabel = "the label";
+        user.setLabel(otpCred.getId(), newLabel);
+        Assert.assertEquals(newLabel, user.credentials().get(0).getUserLabel());
+    }
+
+    @Test
+    public void testDeleteCredentials() {
+        UserResource user = ApiUtil.findUserByUsernameId(testRealm(), "john-doh@localhost");
+        List<CredentialRepresentation> creds = user.credentials();
+        Assert.assertEquals(1, creds.size());
+        CredentialRepresentation credPasswd = creds.get(0);
+        Assert.assertEquals("password", credPasswd.getType());
+
+        // Remove password
+        user.removeCredential(credPasswd.getId());
+        Assert.assertEquals(0, user.credentials().size());
+
+        // Restore password
+        credPasswd.setValue("password");
+        user.resetPassword(credPasswd);
+        Assert.assertEquals(1, user.credentials().size());
+    }
 }
