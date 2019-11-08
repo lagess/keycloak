@@ -1607,13 +1607,13 @@ public class UserTest extends AbstractAdminTest {
         assertSameIds(newOrderCredIds, user.credentials());
 
         // Move last credential in first position
-        user.moveToFirst(expectedCredIds.get(2));
+        user.moveCredentialToFirst(expectedCredIds.get(2));
         newOrderCredIds = Arrays.asList(expectedCredIds.get(2), expectedCredIds.get(1), expectedCredIds.get(0));
         assertSameIds(newOrderCredIds, user.credentials());
 
         // Restore initial state
-        user.moveToFirst(expectedCredIds.get(1));
-        user.moveToFirst(expectedCredIds.get(0));
+        user.moveCredentialToFirst(expectedCredIds.get(1));
+        user.moveCredentialToFirst(expectedCredIds.get(0));
         assertSameIds(expectedCredIds, user.credentials());
     }
 
@@ -1635,7 +1635,7 @@ public class UserTest extends AbstractAdminTest {
 
         // Set and check a new label
         String newLabel = "the label";
-        user.setLabel(otpCred.getId(), newLabel);
+        user.setCredentialUserLabel(otpCred.getId(), newLabel);
         Assert.assertEquals(newLabel, user.credentials().get(0).getUserLabel());
     }
 
