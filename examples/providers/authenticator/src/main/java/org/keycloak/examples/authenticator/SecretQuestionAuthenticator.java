@@ -129,6 +129,10 @@ public class SecretQuestionAuthenticator implements Authenticator, CredentialVal
         user.addRequiredAction(SecretQuestionRequiredAction.PROVIDER_ID);
     }
 
+    public List<RequiredActionFactory> getRequiredActions(KeycloakSession session) {
+        return Collections.singletonList((SecretQuestionRequiredActionFactory)session.getKeycloakSessionFactory().getProviderFactory(RequiredActionProvider.class, SecretQuestionRequiredAction.PROVIDER_ID));
+    }
+
     @Override
     public void close() {
 

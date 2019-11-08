@@ -7,15 +7,21 @@ import org.jboss.arquillian.graphene.page.Page;
 import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.authentication.AuthenticationFlow;
+import org.keycloak.authentication.RequiredActionFactory;
 import org.keycloak.authentication.authenticators.browser.OTPFormAuthenticatorFactory;
 import org.keycloak.authentication.authenticators.browser.PasswordFormFactory;
 import org.keycloak.authentication.authenticators.browser.UsernameFormFactory;
 import org.keycloak.authentication.authenticators.browser.UsernamePasswordFormFactory;
+import org.keycloak.authentication.authenticators.browser.WebAuthnAuthenticatorFactory;
 import org.keycloak.authentication.authenticators.conditional.ConditionalBlockRoleAuthenticatorFactory;
+import org.keycloak.authentication.authenticators.conditional.ConditionalBlockUserConfiguredAuthenticator;
 import org.keycloak.authentication.authenticators.conditional.ConditionalBlockUserConfiguredAuthenticatorFactory;
+import org.keycloak.authentication.requiredactions.WebAuthnRegisterFactory;
+import org.keycloak.events.Details;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticationExecutionModel.Requirement;
 import org.keycloak.models.AuthenticationFlowModel;
@@ -25,9 +31,13 @@ import org.keycloak.models.utils.DefaultAuthenticationFlows;
 import org.keycloak.models.utils.TimeBasedOTP;
 import org.keycloak.representations.idm.IdentityProviderRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
+import org.keycloak.representations.idm.RequiredActionProviderRepresentation;
+import org.keycloak.representations.idm.RequiredActionProviderSimpleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
 import org.keycloak.testsuite.ActionURIUtils;
+import org.keycloak.testsuite.AssertEvents;
+import org.keycloak.testsuite.auth.page.login.OTPSetup;
 import org.keycloak.testsuite.auth.page.login.OneTimeCode;
 import org.keycloak.testsuite.broker.SocialLoginTest;
 import org.keycloak.testsuite.client.KeycloakTestingClient;
@@ -47,6 +57,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -81,7 +92,10 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
     protected LoginTotpPage loginTotpPage;
 
     @Page
-    private OneTimeCode oneTimeCodePage;
+    protected OneTimeCode oneTimeCodePage;
+
+    @Rule
+    public AssertEvents events = new AssertEvents(this);
 
     @Override
     public void configureTestRealm(RealmRepresentation testRealm) {
@@ -486,6 +500,8 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
 
             Assert.assertFalse(passwordPage.isCurrent());
             Assert.assertFalse(loginPage.isCurrent());
+            events.expectLogin().user(testRealm().users().search("user-with-one-configured-otp").get(0).getId())
+                    .detail(Details.USERNAME, "user-with-one-configured-otp").assertEvent();
         } finally {
             testingClient.server("test").run(setBrowserFlowToRealm());
         }
@@ -599,6 +615,471 @@ public class BrowserFlowTest extends AbstractTestRealmKeycloakTest {
                 )
                 // Activate this new flow
                 .defineAsBrowserFlow()
+        );
+    }
+
+    @Test
+    public void testConditionalFlowWithBlockEvaluatingToFalseActsAsDisabled(){
+        String newFlowAlias = "browser - copy 1";
+        configureBrowserFlowWithConditionalFlowWithOTP(newFlowAlias);
+
+        try {
+            loginUsernameOnlyPage.open();
+            loginUsernameOnlyPage.assertCurrent();
+            loginUsernameOnlyPage.login("test-user@localhost");
+
+            // Assert that the login evaluates to an error, as all required elements to not validate to successful
+            errorPage.assertCurrent();
+
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+        }
+    }
+
+    @Test
+    public void testConditionalFlowWithBlockEvaluatingToTrueActsAsRequired(){
+        String newFlowAlias = "browser - copy 1";
+        configureBrowserFlowWithConditionalFlowWithOTP(newFlowAlias);
+
+        try {
+            loginUsernameOnlyPage.open();
+            loginUsernameOnlyPage.assertCurrent();
+            loginUsernameOnlyPage.login("user-with-one-configured-otp");
+
+            // Assert on password page now
+            Assert.assertTrue(oneTimeCodePage.isOtpLabelPresent());
+            loginTotpPage.assertCurrent();
+            loginTotpPage.assertCredentialsComboboxAvailability(false);
+
+            oneTimeCodePage.sendCode(getOtpCode("DJmQfC73VGFhw7D4QJ8A"));
+            Assert.assertFalse(loginTotpPage.isCurrent());
+            events.expectLogin().user(testRealm().users().search("user-with-one-configured-otp").get(0).getId())
+                    .detail(Details.USERNAME, "user-with-one-configured-otp").assertEvent();
+
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+        }
+    }
+
+    /**
+     * Configure the browser flow with a simple flow that contains:
+     * UsernameForm REQUIRED
+     * Subflow REQUIRED
+     * ** Sub-subflow CONDITIONAL
+     * ***** ConditionalUserConfiguredAuthenticator REQUIRED
+     * ***** OTPFormAuthenticator REQUIRED
+     *
+     * The expected behaviour is to prevent login if the user doesn't have an OTP credential, and to be able to login with an
+     * OTP if the user has one. This demonstrates that conditional branches act as disabled when their conditional authenticator evaluates to false
+     *
+     * @param newFlowAlias
+     */
+    private void configureBrowserFlowWithConditionalFlowWithOTP(String newFlowAlias) {
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session).copyBrowserFlow(newFlowAlias));
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session)
+                .selectFlow(newFlowAlias)
+                .inForms(forms -> forms
+                        .clear()
+                        .addAuthenticatorExecution(AuthenticationExecutionModel.Requirement.REQUIRED, UsernameFormFactory.PROVIDER_ID)
+                        .addSubFlowExecution(Requirement.REQUIRED, sf -> sf
+                                .addSubFlowExecution(Requirement.CONDITIONAL, subFlow -> subFlow
+                                        .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalBlockUserConfiguredAuthenticatorFactory.PROVIDER_ID)
+                                        .addAuthenticatorExecution(Requirement.REQUIRED, OTPFormAuthenticatorFactory.PROVIDER_ID)
+                                )
+                        )
+
+                )
+                // Activate this new flow
+                .defineAsBrowserFlow()
+        );
+    }
+
+    /**
+     * In this test the user is expected to have to log in with OTP
+     */
+    @Test
+    public void testConditionalFlowWithMultipleConditionalAuthenticatorsWithUserWithRoleAndOTP() {
+        String newFlowAlias = "browser - copy 1";
+        configureBrowserFlowWithConditionalFlowWithMultipleConditionalAuthenticators(newFlowAlias);
+
+        try {
+            String userId = testRealm().users().search("user-with-two-configured-otp").get(0).getId();
+            provideUsernamePassword("user-with-two-configured-otp");
+            events.expectLogin().user(userId).session((String) null)
+                    .error("invalid_user_credentials")
+                    .detail(Details.USERNAME, "user-with-two-configured-otp")
+                    .removeDetail(Details.CONSENT)
+                    .assertEvent();
+
+            // Assert on otp page now
+            Assert.assertTrue(oneTimeCodePage.isOtpLabelPresent());
+            loginTotpPage.assertCurrent();
+            loginTotpPage.assertCredentialsComboboxAvailability(true);
+
+            oneTimeCodePage.sendCode(getOtpCode("DJmQfC73VGFhw7D4QJ8A"));
+            Assert.assertFalse(loginTotpPage.isCurrent());
+            events.expectLogin().user(userId).detail(Details.USERNAME, "user-with-two-configured-otp").assertEvent();
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+        }
+    }
+
+    /**
+     * In this test, the user is expected to have to login with username and password only, as the conditional branch evaluates to false, and is therefore DISABLED
+     */
+    @Test
+    public void testConditionalFlowWithMultipleConditionalAuthenticatorsWithUserWithRoleButNotOTP() {
+        String newFlowAlias = "browser - copy 1";
+        configureBrowserFlowWithConditionalFlowWithMultipleConditionalAuthenticators(newFlowAlias);
+
+        try {
+            String userId = testRealm().users().search("user-with-one-configured-otp").get(0).getId();
+            provideUsernamePassword("user-with-one-configured-otp");
+            events.expectLogin().user(userId).session((String) null)
+                    .error("invalid_user_credentials")
+                    .detail(Details.USERNAME, "user-with-one-configured-otp")
+                    .removeDetail(Details.CONSENT)
+                    .assertEvent();
+            // Assert not on otp page now
+            Assert.assertFalse(oneTimeCodePage.isOtpLabelPresent());
+            Assert.assertFalse(loginTotpPage.isCurrent());
+            events.expectLogin().user(userId).detail(Details.USERNAME, "user-with-one-configured-otp").assertEvent();
+
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+        }
+    }
+
+    /**
+     * Configure the browser flow with a flow that contains:
+     * UsernamePasswordForm REQUIRED
+     * Subflow CONDITIONAL
+     * ** ConditionalUserConfiguredAuthenticator REQUIRED
+     * ** ConditionalRoleAuthenticator REQUIRED
+     * ** OTPFormAuthenticatorFactory ALTERNATIVE
+     * ** sub-subflow ALERNATIVE
+     * **** OTPFormAuthenticatorFactory DISABLED
+     *
+     * The expected behaviour is the following:
+     * - If the user is in the "user" group and has an OTP credential -> he sees the OTP form
+     * - Otherwise the user logs in directly
+     * This is important, because the ConditionalBlockRoleAuthenticator must not count towards the check from the ConditionalBlockUserConfiguredAuthenticator
+     * The sub-subflow is present in the conditional flow to show that it is ignored by the ConditionalUserConfiguredAuthenticator (as it would raise an exception otherwise)
+     * @param newFlowAlias
+     */
+    private void configureBrowserFlowWithConditionalFlowWithMultipleConditionalAuthenticators(String newFlowAlias) {
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session).copyBrowserFlow(newFlowAlias));
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session)
+                .selectFlow(newFlowAlias)
+                .inForms(forms -> forms
+                                .clear()
+                                .addAuthenticatorExecution(Requirement.REQUIRED, UsernamePasswordFormFactory.PROVIDER_ID)
+                                .addSubFlowExecution(Requirement.CONDITIONAL, subFlow -> subFlow
+                                        .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalBlockUserConfiguredAuthenticatorFactory.PROVIDER_ID)
+                                        .addAuthenticatorExecution(Requirement.REQUIRED, ConditionalBlockRoleAuthenticatorFactory.PROVIDER_ID,
+                                                config -> config.getConfig().put("condUserRole", "user"))
+                                        .addAuthenticatorExecution(Requirement.ALTERNATIVE, OTPFormAuthenticatorFactory.PROVIDER_ID)
+                                        .addSubFlowExecution(Requirement.ALTERNATIVE, sf -> sf
+                                                .addAuthenticatorExecution(Requirement.DISABLED, OTPFormAuthenticatorFactory.PROVIDER_ID))
+                                )
+                        // Activate this new flow
+                ).defineAsBrowserFlow()
+        );
+    }
+
+    /**
+     * This test checks that if a REQUIRED authentication execution which has isUserSetupAllowed -> true
+     * has its requiredActionProvider in a not registered state, then it will not try to create the required action,
+     * and will instead raise an credential setup required error.
+     */
+    @Test
+    public void testLoginWithWithNoOTPCredentialAndNoRequiredActionProviderRegistered(){
+        String newFlowAlias = "browser - copy 1";
+        configureBrowserFlowWithRequiredOTP(newFlowAlias);
+        RequiredActionProviderRepresentation otpRequiredAction = testRealm().flows().getRequiredAction("CONFIGURE_TOTP");
+        testRealm().flows().removeRequiredAction("CONFIGURE_TOTP");
+        try {
+            provideUsernamePassword("test-user@localhost");
+
+            // Assert that the login evaluates to an error, as all required elements to not validate to successful
+            errorPage.assertCurrent();
+
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+            RequiredActionProviderSimpleRepresentation simpleRepresentation = new RequiredActionProviderSimpleRepresentation();
+            simpleRepresentation.setProviderId("CONFIGURE_TOTP");
+            simpleRepresentation.setName(otpRequiredAction.getName());
+            testRealm().flows().registerRequiredAction(simpleRepresentation);
+        }
+    }
+
+    /**
+     * This test checks that if a REQUIRED authentication execution which has isUserSetupAllowed -> true
+     * has its requiredActionProvider disabled, then it will not try to create the required action,
+     * and will instead raise an credential setup required error.
+     */
+    @Test
+    public void testLoginWithWithNoOTPCredentialAndRequiredActionProviderDisabled(){
+        String newFlowAlias = "browser - copy 1";
+        configureBrowserFlowWithRequiredOTP(newFlowAlias);
+        RequiredActionProviderRepresentation otpRequiredAction = testRealm().flows().getRequiredAction("CONFIGURE_TOTP");
+        otpRequiredAction.setEnabled(false);
+        testRealm().flows().updateRequiredAction("CONFIGURE_TOTP", otpRequiredAction);
+        try {
+            provideUsernamePassword("test-user@localhost");
+
+            // Assert that the login evaluates to an error, as all required elements to not validate to successful
+            errorPage.assertCurrent();
+
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+            otpRequiredAction.setEnabled(true);
+            testRealm().flows().updateRequiredAction("CONFIGURE_TOTP", otpRequiredAction);
+        }
+    }
+
+    /**
+     * This test checks that if a REQUIRED authentication execution which has isUserSetupAllowed -> true
+     * has its requiredActionProvider enabled, than it will login and show the otpSetup page.
+     */
+    @Test
+    public void testLoginWithWithNoOTPCredential(){
+        String newFlowAlias = "browser - copy 1";
+        configureBrowserFlowWithRequiredOTP(newFlowAlias);;
+        try {
+            provideUsernamePassword("test-user@localhost");
+
+            // Assert that in this case you arrive to an OTP setup
+            Assert.assertTrue(driver.getCurrentUrl().contains("required-action?execution=CONFIGURE_TOTP"));
+
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+            UserRepresentation user = testRealm().users().search("test-user@localhost").get(0);
+            user.setRequiredActions(Collections.emptyList());
+            testRealm().users().get(user.getId()).update(user);
+        }
+    }
+
+    /**
+     * This flow contains:
+     * UsernamePasswordForm REQUIRED
+     * OTPForm REQUIRED
+     *
+     * @param newFlowAlias
+     */
+    private void configureBrowserFlowWithRequiredOTP(String newFlowAlias) {
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session).copyBrowserFlow(newFlowAlias));
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session)
+                .selectFlow(newFlowAlias)
+                .inForms(forms -> forms
+                                .clear()
+                                .addAuthenticatorExecution(Requirement.REQUIRED, UsernamePasswordFormFactory.PROVIDER_ID)
+                                .addAuthenticatorExecution(Requirement.REQUIRED, OTPFormAuthenticatorFactory.PROVIDER_ID)
+                ).defineAsBrowserFlow() // Activate this new flow
+        );
+    }
+
+    /**
+     * This test checks that if a REQUIRED authentication execution which has isUserSetupAllowed -> true
+     * has its requiredActionProvider in a not registered state, then it will not try to create the required action,
+     * and will instead raise an credential setup required error.
+     * NOTE: webauthn currently isn't configured by default in the realm. When this changes, this test will need to be adapted
+     */
+    @Test
+    public void testLoginWithWithNoWebAuthnCredentialAndNoRequiredActionProviderRegistered(){
+        String newFlowAlias = "browser - copy 1";
+        configureBrowserFlowWithRequiredWebAuthn(newFlowAlias);
+        try {
+            provideUsernamePassword("test-user@localhost");
+
+            // Assert that the login evaluates to an error, as all required elements to not validate to successful
+            errorPage.assertCurrent();
+
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+        }
+    }
+
+    /**
+     * This test checks that if a REQUIRED authentication execution which has isUserSetupAllowed -> true
+     * has its requiredActionProvider disabled, then it will not try to create the required action,
+     * and will instead raise an credential setup required error.
+     * NOTE: webauthn currently isn't configured by default in the realm. When this changes, this test will need to be adapted
+     */
+    @Test
+    public void testLoginWithWithNoWebAuthnCredentialAndRequiredActionProviderDisabled(){
+        String newFlowAlias = "browser - copy 1";
+        configureBrowserFlowWithRequiredWebAuthn(newFlowAlias);
+        RequiredActionProviderSimpleRepresentation requiredActionRepresentation = new RequiredActionProviderSimpleRepresentation();
+        requiredActionRepresentation.setName("WebAuthn Required Action");
+        requiredActionRepresentation.setProviderId(WebAuthnRegisterFactory.PROVIDER_ID);
+        testRealm().flows().registerRequiredAction(requiredActionRepresentation);
+        RequiredActionProviderRepresentation rapr = testRealm().flows().getRequiredAction(WebAuthnRegisterFactory.PROVIDER_ID);
+        rapr.setEnabled(false);
+        testRealm().flows().updateRequiredAction(WebAuthnRegisterFactory.PROVIDER_ID, rapr);
+        try {
+            provideUsernamePassword("test-user@localhost");
+
+            // Assert that the login evaluates to an error, as all required elements to not validate to successful
+            errorPage.assertCurrent();
+
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+            testRealm().flows().removeRequiredAction(WebAuthnRegisterFactory.PROVIDER_ID);
+        }
+    }
+
+    /**
+     * This test checks that if a REQUIRED authentication execution which has isUserSetupAllowed -> true
+     * has its requiredActionProvider enabled, than it will login and show the otpSetup page.
+     * NOTE: webauthn currently isn't configured by default in the realm. When this changes, this test will need to be adapted
+     */
+    @Test
+    public void testLoginWithWithNoWebAuthnCredential(){
+        String newFlowAlias = "browser - copy 1";
+        configureBrowserFlowWithRequiredWebAuthn(newFlowAlias);
+
+        RequiredActionProviderSimpleRepresentation requiredActionRepresentation = new RequiredActionProviderSimpleRepresentation();
+        requiredActionRepresentation.setName("WebAuthn Required Action");
+        requiredActionRepresentation.setProviderId(WebAuthnRegisterFactory.PROVIDER_ID);
+        testRealm().flows().registerRequiredAction(requiredActionRepresentation);
+
+        try {
+            provideUsernamePassword("test-user@localhost");
+
+            // Assert that in this case you arrive to an webauthn setup
+            Assert.assertTrue(driver.getCurrentUrl().contains("required-action?execution=" + WebAuthnRegisterFactory.PROVIDER_ID));
+
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+            testRealm().flows().removeRequiredAction(WebAuthnRegisterFactory.PROVIDER_ID);
+            UserRepresentation user = testRealm().users().search("test-user@localhost").get(0);
+            user.setRequiredActions(Collections.emptyList());
+            testRealm().users().get(user.getId()).update(user);;
+        }
+    }
+
+    /**
+     * This flow contains:
+     * UsernamePasswordForm REQUIRED
+     * WebAuthn REQUIRED
+     *
+     * @param newFlowAlias
+     */
+    private void configureBrowserFlowWithRequiredWebAuthn(String newFlowAlias) {
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session).copyBrowserFlow(newFlowAlias));
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session)
+                .selectFlow(newFlowAlias)
+                .inForms(forms -> forms
+                        .clear()
+                        .addAuthenticatorExecution(Requirement.REQUIRED, UsernamePasswordFormFactory.PROVIDER_ID)
+                        .addAuthenticatorExecution(Requirement.REQUIRED, WebAuthnAuthenticatorFactory.PROVIDER_ID)
+                ).defineAsBrowserFlow() // Activate this new flow
+        );
+    }
+
+
+    /**
+     * This test checks that if a alternative authentication execution which has no credential, and the alternative is a flow,
+     * then the selection mechanism will see that there's no viable alternative, and move on to the next execution (in this case the flow)
+     */
+    @Test
+    public void testLoginWithWithNoOTPCredentialAndAlternativeActionProvider(){
+        String newFlowAlias = "browser - copy 1";
+        configureBrowserFlowWithAlternativeOTPAndPassword(newFlowAlias);
+        try {
+            loginUsernameOnlyPage.open();
+            loginUsernameOnlyPage.assertCurrent();
+            loginUsernameOnlyPage.login("test-user@localhost");
+
+            // Assert that the login skipped the OTP authenticator and moved to the password
+            passwordPage.assertCurrent();
+
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+        }
+    }
+
+    /**
+     * This flow contains:
+     * UsernameForm REQUIRED
+     * Subflow REQUIRED
+     * ** OTPForm ALTERNATIVE
+     * ** sub-subflow ALTERNATIVE
+     * **** PasswordForm ALTERNATIVE
+     *
+     * The passwordform is in a sub-subflow, because otherwise credential preference mechanisms would take over and any
+     * way go into the password form
+     *
+     * @param newFlowAlias
+     */
+    private void configureBrowserFlowWithAlternativeOTPAndPassword(String newFlowAlias) {
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session).copyBrowserFlow(newFlowAlias));
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session)
+                .selectFlow(newFlowAlias)
+                .inForms(forms -> forms
+                        .clear()
+                        .addAuthenticatorExecution(Requirement.REQUIRED, UsernameFormFactory.PROVIDER_ID)
+                        .addSubFlowExecution(Requirement.REQUIRED, subflow -> subflow
+                                .addAuthenticatorExecution(Requirement.ALTERNATIVE, OTPFormAuthenticatorFactory.PROVIDER_ID)
+                                .addSubFlowExecution(Requirement.ALTERNATIVE, sf -> sf
+                                        .addAuthenticatorExecution(Requirement.ALTERNATIVE, PasswordFormFactory.PROVIDER_ID))
+                                )
+                ).defineAsBrowserFlow() // Activate this new flow
+        );
+    }
+
+
+    /**
+     * This test checks that if a alternative authentication execution which has isUserSetupAllowed -> true for
+     * but is not a CredentialValidator (and therefore will not be removed by the selection mechanism),
+     * then it will not try to create the required action, and will instead move to the next alternative
+     */
+    @Test
+    public void testLoginWithWithNoWebAuthnCredentialAndAlternativeActionProvider(){
+        String newFlowAlias = "browser - copy 1";
+        configureBrowserFlowWithAlternativeWebAuthnAndPassword(newFlowAlias);
+        try {
+            loginUsernameOnlyPage.open();
+            loginUsernameOnlyPage.assertCurrent();
+            loginUsernameOnlyPage.login("test-user@localhost");
+
+            // Assert that the login skipped the OTP authenticator and moved to the password
+            passwordPage.assertCurrent();
+
+        } finally {
+            testingClient.server("test").run(setBrowserFlowToRealm());
+        }
+    }
+
+    /**
+     * This flow contains:
+     * UsernameForm REQUIRED
+     * Subflow REQUIRED
+     * ** WebAuthn ALTERNATIVE
+     * ** sub-subflow ALTERNATIVE
+     * **** PasswordForm ALTERNATIVE
+     *
+     * The password form is in a sub-subflow, because otherwise credential preference mechanisms would take over and any
+     * way go into the password form. Note that this flow only works for the test because WebAuthn is a isUserSetupAllowed
+     * flow that is not a CredentialValidator. When this changes, this flow will have to be modified to use another appropriate
+     * authenticator.
+     *
+     * @param newFlowAlias
+     */
+    private void configureBrowserFlowWithAlternativeWebAuthnAndPassword(String newFlowAlias) {
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session).copyBrowserFlow(newFlowAlias));
+        testingClient.server("test").run(session -> FlowUtil.inCurrentRealm(session)
+                .selectFlow(newFlowAlias)
+                .inForms(forms -> forms
+                        .clear()
+                        .addAuthenticatorExecution(Requirement.REQUIRED, UsernameFormFactory.PROVIDER_ID)
+                        .addSubFlowExecution(Requirement.REQUIRED, subflow -> subflow
+                                .addAuthenticatorExecution(Requirement.ALTERNATIVE, WebAuthnAuthenticatorFactory.PROVIDER_ID)
+                                .addSubFlowExecution(Requirement.ALTERNATIVE, sf -> sf
+                                        .addAuthenticatorExecution(Requirement.ALTERNATIVE, PasswordFormFactory.PROVIDER_ID))
+                        )
+                ).defineAsBrowserFlow() // Activate this new flow
         );
     }
 
