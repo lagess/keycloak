@@ -209,7 +209,7 @@ public class FlowsTest extends AbstractConsoleTest {
                 "Username Password Form",
                 "Copy Of Browser Browser - Conditional OTP",
                 "OTP Form",
-                "Conditional Block - User Configured",
+                "Condition - User Configured",
                 "Identity Provider Redirector"
         );
         
@@ -283,7 +283,7 @@ public class FlowsTest extends AbstractConsoleTest {
                 "Copy Of Browser Forms",
                 "Username Password Form",
                 "Copy Of Browser Browser - Conditional OTP",
-                "Conditional Block - User Configured",
+                "Condition - User Configured",
                 "OTP Form",
                 "NestedFlow",
                 "Reset Password"

@@ -648,7 +648,7 @@ public abstract class AbstractMigrationTest extends AbstractKeycloakTest {
         Assert.assertEquals(AuthenticationExecutionModel.Requirement.CONDITIONAL.toString(), subflowExecution.getRequirement());
 
         AuthenticationExecutionInfoRepresentation childEx1 = authExecutions.get(counter + 1);
-        Assert.assertEquals("Conditional block - user configured", childEx1.getDisplayName());
+        Assert.assertEquals("Condition - user configured", childEx1.getDisplayName());
         Assert.assertEquals(AuthenticationExecutionModel.Requirement.REQUIRED.toString(), childEx1.getRequirement());
         Assert.assertEquals(0, childEx1.getIndex());
         Assert.assertEquals(subflowExecution.getLevel() + 1, childEx1.getLevel());

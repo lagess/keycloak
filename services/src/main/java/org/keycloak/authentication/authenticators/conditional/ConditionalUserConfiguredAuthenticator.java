@@ -11,8 +11,8 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 
-public class ConditionalBlockUserConfiguredAuthenticator implements ConditionalBlockAuthenticator {
-    public static final ConditionalBlockUserConfiguredAuthenticator SINGLETON = new ConditionalBlockUserConfiguredAuthenticator();
+public class ConditionalUserConfiguredAuthenticator implements ConditionalAuthenticator {
+    public static final ConditionalUserConfiguredAuthenticator SINGLETON = new ConditionalUserConfiguredAuthenticator();
 
     @Override
     public boolean matchCondition(AuthenticationFlowContext context) {
@@ -33,7 +33,7 @@ public class ConditionalBlockUserConfiguredAuthenticator implements ConditionalB
                 AuthenticatorFactory factory = (AuthenticatorFactory) context.getSession().getKeycloakSessionFactory().getProviderFactory(Authenticator.class, e.getAuthenticator());
                 if (factory != null) {
                     Authenticator auth = factory.create(context.getSession());
-                    if (auth != null && auth instanceof ConditionalBlockAuthenticator) {
+                    if (auth != null && auth instanceof ConditionalAuthenticator) {
                         isConditionalAuthenticator = true;
                     }
                 }

@@ -6,11 +6,11 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.authentication.AuthenticationFlowContext;
 
-public interface ConditionalBlockAuthenticator extends Authenticator {
+public interface ConditionalAuthenticator extends Authenticator {
     boolean matchCondition(AuthenticationFlowContext context);
 
     default void authenticate(AuthenticationFlowContext context) {
-        // authenticate is not called for ConditionalBlockAuthenticators
+        // authenticate is not called for ConditionalAuthenticators
     }
 
     default boolean configuredFor(KeycloakSession session, RealmModel realm, UserModel user) {

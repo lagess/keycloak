@@ -1,19 +1,27 @@
 package org.keycloak.authentication.authenticators.conditional;
 
-import java.util.List;
-
 import org.keycloak.Config.Scope;
-import org.keycloak.authentication.Authenticator;
-import org.keycloak.authentication.AuthenticatorFactory;
-import org.keycloak.models.AuthenticationExecutionModel.Requirement;
 import org.keycloak.models.AuthenticationExecutionModel;
-import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.AuthenticationExecutionModel.Requirement;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.provider.ProviderConfigProperty;
+import org.keycloak.provider.ProviderConfigurationBuilder;
 
-public class ConditionalBlockUserConfiguredAuthenticatorFactory implements ConditionalBlockAuthenticatorFactory {
-    public static final String PROVIDER_ID = "conditional-user-configured";
-    protected static final String CONDITIONAL_USER_ROLE = "condUserConfigured";
+import java.util.Collections;
+import java.util.List;
+
+public class ConditionalRoleAuthenticatorFactory implements ConditionalAuthenticatorFactory {
+    public static final String PROVIDER_ID = "conditional-user-role";
+    protected static final String CONDITIONAL_USER_ROLE = "condUserRole";
+
+    private static List<ProviderConfigProperty> commonConfig;
+
+    static {
+        commonConfig = Collections.unmodifiableList(ProviderConfigurationBuilder.create()
+            .property().name(CONDITIONAL_USER_ROLE).label("User role").helpText("Role the user should have to execute this flow").type(ProviderConfigProperty.STRING_TYPE).add()
+            .build()
+        );
+    }
 
     @Override
     public void init(Scope config) {
@@ -37,7 +45,7 @@ public class ConditionalBlockUserConfiguredAuthenticatorFactory implements Condi
 
     @Override
     public String getDisplayType() {
-        return "Conditional block - user configured";
+        return "Condition - user role";
     }
 
     @Override
@@ -47,7 +55,7 @@ public class ConditionalBlockUserConfiguredAuthenticatorFactory implements Condi
 
     @Override
     public boolean isConfigurable() {
-        return false;
+        return true;
     }
 
     private static final Requirement[] REQUIREMENT_CHOICES = {
@@ -66,16 +74,16 @@ public class ConditionalBlockUserConfiguredAuthenticatorFactory implements Condi
 
     @Override
     public String getHelpText() {
-        return "Executes the current flow only if authenticators are configured";
+        return "Flow is executed only if user has the given role.";
     }
 
     @Override
     public List<ProviderConfigProperty> getConfigProperties() {
-        return null;
+        return commonConfig;
     }
 
     @Override
-    public ConditionalBlockAuthenticator getSingleton() {
-        return ConditionalBlockUserConfiguredAuthenticator.SINGLETON;
+    public ConditionalAuthenticator getSingleton() {
+        return ConditionalRoleAuthenticator.SINGLETON;
     }
 }
