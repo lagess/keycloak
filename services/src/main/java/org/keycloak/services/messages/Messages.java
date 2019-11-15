@@ -252,4 +252,7 @@ public class Messages {
     public static final String WEBAUTHN_ERROR_AUTH_VERIFICATION = "webauthn-error-auth-verification";
     public static final String WEBAUTHN_ERROR_REGISTER_VERIFICATION = "webauthn-error-register-verification";
     public static final String WEBAUTHN_ERROR_USER_NOT_FOUND = "webauthn-error-user-not-found";
+
+    public static final String ARTIFACT_RESOLUTION_SERVICE_ERROR = "artifactResolutionServiceError";
+    public static final String ARTIFACT_RESOLUTION_SERVICE_INVALID_RESPONSE = "artifactResolutionServiceInvalidResponse";
 }
