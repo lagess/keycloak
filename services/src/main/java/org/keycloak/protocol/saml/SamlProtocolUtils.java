@@ -17,21 +17,40 @@
 
 package org.keycloak.protocol.saml;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.security.Key;
+
+import com.google.common.base.Charsets;
 import org.keycloak.common.VerificationException;
 import org.keycloak.common.util.PemUtils;
+import org.keycloak.dom.saml.v2.assertion.NameIDType;
+import org.keycloak.dom.saml.v2.protocol.ArtifactResponseType;
+import org.keycloak.dom.saml.v2.protocol.StatusCodeType;
+import org.keycloak.dom.saml.v2.protocol.StatusType;
 import org.keycloak.models.ClientModel;
 import org.keycloak.saml.SignatureAlgorithm;
 import org.keycloak.saml.common.constants.GeneralConstants;
+import org.keycloak.saml.common.constants.JBossSAMLConstants;
+import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
+import org.keycloak.saml.common.exceptions.ConfigurationException;
+import org.keycloak.saml.common.exceptions.ParsingException;
 import org.keycloak.saml.common.exceptions.ProcessingException;
+import org.keycloak.saml.common.util.DocumentUtil;
+import org.keycloak.saml.common.util.StaxUtil;
 import org.keycloak.saml.processing.api.saml.v2.sig.SAML2Signature;
+import org.keycloak.saml.processing.core.saml.v2.common.IDGenerator;
+import org.keycloak.saml.processing.core.saml.v2.util.XMLTimeUtil;
+import org.keycloak.saml.processing.core.saml.v2.writers.SAMLRequestWriter;
+import org.keycloak.saml.processing.core.saml.v2.writers.SAMLResponseWriter;
 import org.keycloak.saml.processing.web.util.RedirectBindingUtil;
 import org.w3c.dom.Document;
 
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.UriInfo;
-import java.security.PublicKey;
-import java.security.Signature;
+import javax.xml.stream.XMLStreamWriter;
+
 import org.keycloak.dom.saml.v2.SAML2Object;
 import org.keycloak.dom.saml.v2.protocol.ExtensionsType;
 import org.keycloak.dom.saml.v2.protocol.RequestAbstractType;
@@ -40,9 +59,19 @@ import org.keycloak.rotation.HardcodedKeyLocator;
 import org.keycloak.rotation.KeyLocator;
 import org.keycloak.saml.processing.core.saml.v2.common.SAMLDocumentHolder;
 import org.keycloak.saml.processing.core.util.KeycloakKeySamlExtensionGenerator;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.Signature;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Base64;
+
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -196,6 +225,75 @@ public class SamlProtocolUtils {
             }
         }
 
+        return null;
+    }
+
+    /**
+     * Takes a document (containing the saml Response), and inserts it as the body of an ArtifactResponse. The ArtifactResponse is returned as
+     * a Document.
+     * @param samlResponse a saml Response message
+     * @return A document containing the saml Response incapsulated in an artifact response.
+     * @throws ConfigurationException
+     * @throws ProcessingException
+     */
+    public static Document buildArtifactResponse(Document samlResponse) throws ConfigurationException, ProcessingException {
+        ArtifactResponseType artifactResponse = new ArtifactResponseType(IDGenerator.create("ID_"),
+                XMLTimeUtil.getIssueInstant());
+
+        // Status
+        StatusType statusType = new StatusType();
+        StatusCodeType statusCodeType = new StatusCodeType();
+        statusCodeType.setValue(JBossSAMLURIConstants.STATUS_SUCCESS.getUri());
+        statusType.setStatusCode(statusCodeType);
+
+        artifactResponse.setStatus(statusType);
+        Document artifactResponseDocument = null;
+        try {
+            artifactResponseDocument = SamlProtocolUtils.convert(artifactResponse);
+        } catch (ParsingException e) {
+            throw new ProcessingException(e);
+        }
+        Element artifactResponseElement = artifactResponseDocument.getDocumentElement();
+
+        Node issuer = artifactResponseDocument.importNode(SamlProtocolUtils.getIssuer(samlResponse), true);
+        if (issuer != null) {
+            artifactResponseElement.appendChild(issuer);
+        }
+
+        Node samlresponseNode = artifactResponseDocument.importNode(samlResponse.getDocumentElement(), true);
+        artifactResponseElement.appendChild(samlresponseNode);
+
+        return artifactResponseDocument;
+    }
+
+    /**
+     * Convert a SAML2 ArtifactResponse into a Document
+     * @param responseType an artifactResponse
+     *
+     * @return an artifact response converted to a Document
+     *
+     * @throws ParsingException
+     * @throws ConfigurationException
+     * @throws ProcessingException
+     */
+    private static Document convert(ArtifactResponseType responseType) throws ProcessingException, ConfigurationException,
+            ParsingException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        SAMLResponseWriter writer = new SAMLResponseWriter(StaxUtil.getXMLStreamWriter(bos));
+        writer.write(responseType);
+        return DocumentUtil.getDocument(new ByteArrayInputStream(bos.toByteArray()));
+    }
+
+    /**
+     * Gets the first found issuer of a SAML Document
+     * @param samlDocument a document containing a SAML message
+     * @return an issuer node
+     */
+    private static Node getIssuer(Document samlDocument) {
+        NodeList nl = samlDocument.getElementsByTagNameNS(JBossSAMLURIConstants.ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get());
+        if (nl.getLength() > 0) {
+            return nl.item(0);
+        }
         return null;
     }
 }
