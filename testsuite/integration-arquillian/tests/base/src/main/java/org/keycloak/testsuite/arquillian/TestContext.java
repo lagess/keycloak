@@ -89,7 +89,7 @@ public final class TestContext {
         this.appServerBackendsInfo.addAll(appServerBackendsInfo);
     }
 
-    public Class getTestClass() {
+    public Class<?> getTestClass() {
         return testClass;
     }
 
@@ -149,6 +149,10 @@ public final class TestContext {
     }
 
     public KeycloakTestingClient getTestingClient() {
+        if (testingClient == null) {
+            String authServerContextRoot = suiteContext.getAuthServerInfo().getContextRoot().toString();
+            testingClient = KeycloakTestingClient.getInstance(authServerContextRoot + "/auth");
+        }
         return testingClient;
     }
 

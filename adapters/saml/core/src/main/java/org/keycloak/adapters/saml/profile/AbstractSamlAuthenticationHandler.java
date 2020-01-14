@@ -348,8 +348,10 @@ public abstract class AbstractSamlAuthenticationHandler implements SamlAuthentic
             try {
                 cvb.clockSkewInMillis(deployment.getIDP().getAllowedClockSkew());
                 cvb.addAllowedAudience(URI.create(deployment.getEntityID()));
-                // getDestination has been validated to match request URL already so it matches SAML endpoint
-                cvb.addAllowedAudience(URI.create(responseType.getDestination()));
+                if (responseType.getDestination() != null) {
+                  // getDestination has been validated to match request URL already so it matches SAML endpoint
+                  cvb.addAllowedAudience(URI.create(responseType.getDestination()));
+                }
             } catch (IllegalArgumentException ex) {
                 // warning has been already emitted in DeploymentBuilder
             }
@@ -567,19 +569,20 @@ public abstract class AbstractSamlAuthenticationHandler implements SamlAuthentic
     }
 
     private String getAttributeValue(Object attrValue) {
-        String value = null;
-        if (attrValue instanceof String) {
-            value = (String) attrValue;
+        if (attrValue == null) {
+            return "";
+        } else if (attrValue instanceof String) {
+            return (String) attrValue;
         } else if (attrValue instanceof Node) {
             Node roleNode = (Node) attrValue;
-            value = roleNode.getFirstChild().getNodeValue();
+            return roleNode.getFirstChild().getNodeValue();
         } else if (attrValue instanceof NameIDType) {
             NameIDType nameIdType = (NameIDType) attrValue;
-            value = nameIdType.getValue();
+            return nameIdType.getValue();
         } else {
             log.warn("Unable to extract unknown SAML assertion attribute value type: " + attrValue.getClass().getName());
         }
-        return value;
+        return null;
     }
 
     protected boolean isRole(AttributeType attribute) {

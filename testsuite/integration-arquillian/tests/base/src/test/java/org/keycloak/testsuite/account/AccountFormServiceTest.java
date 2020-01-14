@@ -38,11 +38,11 @@ import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.representations.idm.EventRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
-import org.keycloak.services.resources.account.AccountFormService;
 import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
 import org.keycloak.testsuite.AssertEvents;
 import org.keycloak.testsuite.admin.ApiUtil;
 import org.keycloak.testsuite.arquillian.AuthServerTestEnricher;
+import org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude;
 import org.keycloak.testsuite.drone.Different;
 import org.keycloak.testsuite.pages.AccountApplicationsPage;
 import org.keycloak.testsuite.pages.AccountFederatedIdentityPage;
@@ -64,14 +64,12 @@ import org.keycloak.testsuite.util.OAuthClient;
 import org.keycloak.testsuite.util.RealmBuilder;
 import org.keycloak.testsuite.util.UIUtils;
 import org.keycloak.testsuite.util.UserBuilder;
-import java.io.Closeable;
-import java.io.IOException;
+import java.util.Collections;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -85,8 +83,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-
-import javax.ws.rs.core.UriBuilder;
+import static org.keycloak.testsuite.arquillian.AuthServerTestEnricher.AUTH_SERVER_SSL_REQUIRED;
+import static org.keycloak.testsuite.arquillian.AuthServerTestEnricher.getAuthServerContextRoot;
+import org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude.AuthServer;
 
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
@@ -142,7 +141,7 @@ public class AccountFormServiceTest extends AbstractTestRealmKeycloakTest {
         if (AUTH_SERVER_SSL_REQUIRED) {
             // Some scenarios here use redirections, so we need to fix the base url
             findTestApp(testRealm)
-                  .setBaseUrl(String.format("%s://localhost:%s/auth/realms/master/app/auth", AUTH_SERVER_SCHEME, AUTH_SERVER_PORT));
+                  .setBaseUrl(String.format("%s/auth/realms/master/app/auth", getAuthServerContextRoot()));
         }
     }
 
@@ -208,7 +207,7 @@ public class AccountFormServiceTest extends AbstractTestRealmKeycloakTest {
 
         Assert.assertTrue(appPage.isCurrent());
 
-        driver.navigate().to(String.format("%s?referrer=test-app&referrer_uri=%s://localhost:%s/auth/realms/master/app/auth?test", profilePage.getPath(), AUTH_SERVER_SCHEME, AUTH_SERVER_PORT));
+        driver.navigate().to(String.format("%s?referrer=test-app&referrer_uri=%s/auth/realms/master/app/auth?test", profilePage.getPath(), getAuthServerContextRoot()));
         Assert.assertTrue(profilePage.isCurrent());
         profilePage.backToApplication();
 
@@ -468,23 +467,23 @@ public class AccountFormServiceTest extends AbstractTestRealmKeycloakTest {
         assertChangePasswordSucceeds("password",  "password3"); // current: password
         assertNumberOfStoredCredentials(2);
 
-        assertChangePasswordFails   ("password3", "password");  // current: password1, history: password
+        assertChangePasswordFails   ("password3", "password");  // current: password3, history: password
         assertNumberOfStoredCredentials(2);
         assertChangePasswordFails   ("password3", "password3"); // current: password1, history: password
         assertNumberOfStoredCredentials(2);
         assertChangePasswordSucceeds("password3", "password4"); // current: password1, history: password
         assertNumberOfStoredCredentials(3);
 
-        assertChangePasswordFails   ("password4", "password");  // current: password2, history: password, password1
+        assertChangePasswordFails   ("password4", "password");  // current: password4, history: password3, password
         assertNumberOfStoredCredentials(3);
-        assertChangePasswordFails   ("password4", "password3"); // current: password2, history: password, password1
+        assertChangePasswordFails   ("password4", "password3"); // current: password4, history: password3, password
         assertNumberOfStoredCredentials(3);
-        assertChangePasswordFails   ("password4", "password4"); // current: password2, history: password, password1
+        assertChangePasswordFails   ("password4", "password4"); // current: password4, history: password3, password
         assertNumberOfStoredCredentials(3);
-        assertChangePasswordSucceeds("password4", "password5"); // current: password2, history: password, password1
+        assertChangePasswordSucceeds("password4", "password5"); // current: password4, history: password3, password
         assertNumberOfStoredCredentials(3);
 
-        assertChangePasswordSucceeds("password5", "password");  // current: password3, history: password1, password2
+        assertChangePasswordSucceeds("password5", "password");  // current: password5, history: password4, password3
         assertNumberOfStoredCredentials(3);
     }
 
@@ -559,6 +558,26 @@ public class AccountFormServiceTest extends AbstractTestRealmKeycloakTest {
         assertNumberOfStoredCredentials(1);
         assertChangePasswordSucceeds("password1", "password");  // current: password1
         assertNumberOfStoredCredentials(1);
+    }
+
+    @Test
+    public void changePasswordToOldOneAfterPasswordHistoryPolicyExpirationChange() {
+        userId = createUser("test", "user-changePasswordToOldOneAfterPasswordHistoryPolicyExpirationChange", "password");
+
+        setPasswordPolicy(PasswordPolicy.PASSWORD_HISTORY_ID + "(3)");
+
+        changePasswordPage.open();
+        loginPage.login("user-changePasswordToOldOneAfterPasswordHistoryPolicyExpirationChange", "password");
+        events.expectLogin().user(userId).client("account").detail(Details.REDIRECT_URI, getAccountRedirectUrl() + "?path=password").assertEvent();
+
+        assertNumberOfStoredCredentials(1);
+        assertChangePasswordSucceeds("password", "password1");
+        assertNumberOfStoredCredentials(2);
+        assertChangePasswordSucceeds("password1", "password2");
+        assertNumberOfStoredCredentials(3);
+
+        setPasswordPolicy(PasswordPolicy.PASSWORD_HISTORY_ID + "(2)");
+        assertChangePasswordSucceeds("password2", "password");
     }
 
     @Test
@@ -1029,6 +1048,7 @@ public class AccountFormServiceTest extends AbstractTestRealmKeycloakTest {
     }
 
     @Test
+    @AuthServerContainerExclude(AuthServer.REMOTE) // we need to do domain name -> ip address to make this test work in remote testing
     public void sessions() {
         loginPage.open();
         loginPage.clickRegister();
@@ -1081,6 +1101,7 @@ public class AccountFormServiceTest extends AbstractTestRealmKeycloakTest {
     }
 
     @Test
+    @AuthServerContainerExclude(AuthServer.REMOTE)
     public void applicationsVisibilityNoScopesNoConsent() throws Exception {
         try (ClientAttributeUpdater cau = ClientAttributeUpdater.forClient(adminClient, REALM_NAME, ROOT_URL_CLIENT)
           .setConsentRequired(false)
@@ -1095,7 +1116,7 @@ public class AccountFormServiceTest extends AbstractTestRealmKeycloakTest {
 
             Map<String, AccountApplicationsPage.AppEntry> apps = applicationsPage.getApplications();
             Assert.assertThat(apps.keySet(), containsInAnyOrder(
-              /* "root-url-client", */ "Account", "test-app", "test-app-scope", "third-party", "test-app-authz", "My Named Test App", "Test App Named - ${client_account}", "direct-grant"));
+              /* "root-url-client", */ "Account", "Account Console", "test-app", "test-app-scope", "third-party", "test-app-authz", "My Named Test App", "Test App Named - ${client_account}", "direct-grant"));
 
             rsu.add(testRealm().roles().get("user").toRepresentation())
               .update();
@@ -1103,11 +1124,12 @@ public class AccountFormServiceTest extends AbstractTestRealmKeycloakTest {
             driver.navigate().refresh();
             apps = applicationsPage.getApplications();
             Assert.assertThat(apps.keySet(), containsInAnyOrder(
-              "root-url-client", "Account", "test-app", "test-app-scope", "third-party", "test-app-authz", "My Named Test App", "Test App Named - ${client_account}", "direct-grant"));
+              "root-url-client", "Account", "Account Console", "test-app", "test-app-scope", "third-party", "test-app-authz", "My Named Test App", "Test App Named - ${client_account}", "direct-grant"));
         }
     }
 
     @Test
+    @AuthServerContainerExclude(AuthServer.REMOTE)
     public void applicationsVisibilityNoScopesAndConsent() throws Exception {
         try (ClientAttributeUpdater cau = ClientAttributeUpdater.forClient(adminClient, REALM_NAME, ROOT_URL_CLIENT)
           .setConsentRequired(true)
@@ -1121,12 +1143,13 @@ public class AccountFormServiceTest extends AbstractTestRealmKeycloakTest {
 
             Map<String, AccountApplicationsPage.AppEntry> apps = applicationsPage.getApplications();
             Assert.assertThat(apps.keySet(), containsInAnyOrder(
-              "root-url-client", "Account", "test-app", "test-app-scope", "third-party", "test-app-authz", "My Named Test App", "Test App Named - ${client_account}", "direct-grant"));
+              "root-url-client", "Account", "Account Console", "test-app", "test-app-scope", "third-party", "test-app-authz", "My Named Test App", "Test App Named - ${client_account}", "direct-grant"));
         }
     }
 
     // More tests (including revoke) are in OAuthGrantTest and OfflineTokenTest
     @Test
+    @AuthServerContainerExclude(AuthServer.REMOTE)
     public void applications() {
         applicationsPage.open();
         loginPage.login("test-user@localhost", "password");
@@ -1135,7 +1158,7 @@ public class AccountFormServiceTest extends AbstractTestRealmKeycloakTest {
         applicationsPage.assertCurrent();
 
         Map<String, AccountApplicationsPage.AppEntry> apps = applicationsPage.getApplications();
-        Assert.assertThat(apps.keySet(), containsInAnyOrder("root-url-client", "Account", "Broker", "test-app", "test-app-scope", "third-party", "test-app-authz", "My Named Test App", "Test App Named - ${client_account}", "direct-grant"));
+        Assert.assertThat(apps.keySet(), containsInAnyOrder("root-url-client", "Account", "Account Console", "Broker", "test-app", "test-app-scope", "third-party", "test-app-authz", "My Named Test App", "Test App Named - ${client_account}", "direct-grant"));
 
         AccountApplicationsPage.AppEntry accountEntry = apps.get("Account");
         Assert.assertThat(accountEntry.getRolesAvailable(), containsInAnyOrder(
@@ -1145,7 +1168,7 @@ public class AccountFormServiceTest extends AbstractTestRealmKeycloakTest {
           "Offline access"
         ));
         Assert.assertThat(accountEntry.getClientScopesGranted(), containsInAnyOrder("Full Access"));
-        Assert.assertEquals(oauth.AUTH_SERVER_ROOT + "/realms/test/account", accountEntry.getHref());
+        Assert.assertEquals(oauth.AUTH_SERVER_ROOT + "/realms/test/account/", accountEntry.getHref());
 
         AccountApplicationsPage.AppEntry testAppEntry = apps.get("test-app");
         Assert.assertEquals(6, testAppEntry.getRolesAvailable().size());

@@ -5,22 +5,27 @@ import org.junit.Before;
 import org.junit.Test;
 import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.testsuite.AbstractKeycloakTest;
+import org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude;
+import org.keycloak.testsuite.util.ContainerAssume;
 import org.keycloak.theme.Theme;
 import org.keycloak.theme.ThemeProvider;
 
 import java.io.IOException;
 import java.util.List;
 
+import static org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude.AuthServer.REMOTE;
+
 /**
  * @author <a href="mailto:vincent.letarouilly@gmail.com">Vincent Letarouilly</a>
  */
+@AuthServerContainerExclude(REMOTE)
 public class ExtendingThemeTest extends AbstractKeycloakTest {
 
     private static final String THEME_NAME = "environment-agnostic";
 
     @Before
     public void setUp() {
-        System.setProperty("existing_system_property", "Keycloak is awesome");
+        testingClient.server().run(session -> System.setProperty("existing_system_property", "Keycloak is awesome"));
     }
 
     @Override
@@ -30,6 +35,8 @@ public class ExtendingThemeTest extends AbstractKeycloakTest {
     // KEYCLOAK-6698
     @Test
     public void systemPropertiesSubstitutionInThemeProperties() {
+        // TODO fix this test on auth-server-wildfly. There is an issue with setup of System properties (other JVM).
+        ContainerAssume.assumeAuthServerUndertow();
         testingClient.server().run(session -> {
             try {
                 ThemeProvider extending = session.getProvider(ThemeProvider.class, "extending");

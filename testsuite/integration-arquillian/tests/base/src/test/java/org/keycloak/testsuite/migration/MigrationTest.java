@@ -16,32 +16,24 @@
  */
 package org.keycloak.testsuite.migration;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.arquillian.container.test.api.TargetsContainer;
-import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.Before;
 import org.junit.Test;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.RealmRepresentation;
-import org.keycloak.testsuite.arquillian.DeploymentTargetModifier;
+import org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude;
 import org.keycloak.testsuite.arquillian.migration.Migration;
-import org.keycloak.testsuite.runonserver.RunOnServerDeployment;
 
 import javax.ws.rs.NotFoundException;
 import java.util.List;
 
+import org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude.AuthServer;
 import static org.keycloak.testsuite.auth.page.AuthRealm.MASTER;
 
 /**
  * @author <a href="mailto:vramik@redhat.com">Vlastislav Ramik</a>
  */
+@AuthServerContainerExclude(AuthServer.REMOTE)
 public class MigrationTest extends AbstractMigrationTest {
-
-    @Deployment
-    @TargetsContainer(DeploymentTargetModifier.AUTH_SERVER_CURRENT)
-    public static WebArchive deploy() {
-        return RunOnServerDeployment.create();
-    }
 
     @Override
     public void addTestRealms(List<RealmRepresentation> testRealms) {
@@ -72,6 +64,8 @@ public class MigrationTest extends AbstractMigrationTest {
         testMigrationTo5_x();
         testMigrationTo6_x();
         testMigrationTo7_x(true);
+        testMigrationTo8_x();
+        testMigrationTo9_x();
     }
 
     @Test
@@ -82,6 +76,8 @@ public class MigrationTest extends AbstractMigrationTest {
         testMigrationTo5_x();
         testMigrationTo6_x();
         testMigrationTo7_x(true);
+        testMigrationTo8_x();
+        testMigrationTo9_x();
     }
 
     @Test
@@ -93,6 +89,8 @@ public class MigrationTest extends AbstractMigrationTest {
         testMigrationTo5_x();
         testMigrationTo6_x();
         testMigrationTo7_x(true);
+        testMigrationTo8_x();
+        testMigrationTo9_x();
     }
 
     @Test
@@ -105,6 +103,8 @@ public class MigrationTest extends AbstractMigrationTest {
         testMigrationTo5_x();
         testMigrationTo6_x();
         testMigrationTo7_x(false);
+        testMigrationTo8_x();
+        testMigrationTo9_x();
     }
 
 }

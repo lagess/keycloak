@@ -181,7 +181,7 @@ public class TokenManager {
             MigrationUtils.migrateOldOfflineToken(session, realm, client, user);
         }
 
-        ClientSessionContext clientSessionCtx = DefaultClientSessionContext.fromClientSessionAndScopeParameter(clientSession, oldTokenScope);
+        ClientSessionContext clientSessionCtx = DefaultClientSessionContext.fromClientSessionAndScopeParameter(clientSession, oldTokenScope, session);
 
         // Check user didn't revoke granted consent
         if (!verifyConsentStillAvailable(session, user, client, clientSessionCtx.getClientScopes())) {
@@ -441,7 +441,7 @@ public class TokenManager {
         // Remove authentication session now
         new AuthenticationSessionManager(session).removeAuthenticationSession(userSession.getRealm(), authSession, true);
 
-        ClientSessionContext clientSessionCtx = DefaultClientSessionContext.fromClientSessionAndClientScopeIds(clientSession, clientScopeIds);
+        ClientSessionContext clientSessionCtx = DefaultClientSessionContext.fromClientSessionAndClientScopeIds(clientSession, clientScopeIds, session);
         return clientSessionCtx;
     }
 
@@ -470,10 +470,9 @@ public class TokenManager {
             }
             return roleMappings;
         } else {
-            Set<RoleModel> scopeMappings = new HashSet<>();
 
             // 1 - Client roles of this client itself
-            scopeMappings.addAll(client.getRoles());
+            Set<RoleModel> scopeMappings = new HashSet<>(client.getRoles());
 
             // 2 - Role mappings of client itself + default client scopes + optional client scopes requested by scope parameter (if applyScopeParam is true)
             for (ClientScopeModel clientScope : clientScopes) {

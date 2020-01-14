@@ -17,21 +17,14 @@
 
 package org.keycloak.testsuite.admin.user;
 
-import org.jboss.arquillian.container.test.api.Deployment;
-import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.Test;
 import org.keycloak.admin.client.resource.RealmResource;
-import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.events.admin.OperationType;
 import org.keycloak.events.admin.ResourceType;
 import org.keycloak.representations.idm.GroupRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
-import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
 import org.keycloak.testsuite.admin.AbstractAdminTest;
 import org.keycloak.testsuite.admin.ApiUtil;
-import org.keycloak.testsuite.federation.DummyUserFederationProvider;
-import org.keycloak.testsuite.federation.DummyUserFederationProviderFactory;
-import org.keycloak.testsuite.runonserver.RunOnServerDeployment;
 import org.keycloak.testsuite.util.AdminEventPaths;
 import org.keycloak.testsuite.util.UserBuilder;
 
@@ -41,21 +34,15 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.keycloak.testsuite.Assert.assertNames;
+import org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude;
+import org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude.AuthServer;
 
 /**
  * @author <a href="mailto:volker.suschke@bosch-si.com">Volker Suschke</a>
  * @author <a href="mailto:leon.graser@bosch-si.com">Leon Graser</a>
  */
+@AuthServerContainerExclude(AuthServer.REMOTE)
 public class UserGroupMembershipTest extends AbstractAdminTest {
-
-    @Deployment
-    public static WebArchive deploy() {
-        return RunOnServerDeployment.create(
-                AbstractAdminTest.class,
-                AbstractTestRealmKeycloakTest.class,
-                DummyUserFederationProviderFactory.class, DummyUserFederationProvider.class,
-                UserResource.class);
-    }
 
     public String createUser() {
         return createUser("user1", "user1@localhost");

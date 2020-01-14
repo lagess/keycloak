@@ -46,6 +46,9 @@ import static org.junit.Assert.assertTrue;
 import static org.keycloak.authentication.authenticators.browser.ConditionalOtpFormAuthenticator.*;
 import static org.keycloak.models.UserModel.RequiredAction.CONFIGURE_TOTP;
 import static org.keycloak.representations.idm.CredentialRepresentation.PASSWORD;
+import static org.keycloak.testsuite.arquillian.AuthServerTestEnricher.AUTH_SERVER_PORT;
+import org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude;
+import org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude.AuthServer;
 import static org.keycloak.testsuite.util.URLAssert.assertCurrentUrlStartsWith;
 
 /**
@@ -104,7 +107,7 @@ public class CustomAuthFlowOTPTest extends AbstractCustomAccountManagementTest {
         realm.setBrowserFlow("browser");
         testRealmResource().update(realm);
 
-        updateRequirement("browser", "auth-otp-form", Requirement.REQUIRED);
+        updateRequirement("browser", Requirement.REQUIRED, (authExec) -> authExec.getDisplayName().equals("Browser - Conditional OTP"));
         testRealmAccountManagementPage.navigateTo();
         testRealmLoginPage.form().login(testUser);
         assertTrue(loginConfigTotpPage.isCurrent());
@@ -117,6 +120,7 @@ public class CustomAuthFlowOTPTest extends AbstractCustomAccountManagementTest {
     }
 
     @Test
+    @AuthServerContainerExclude(AuthServer.REMOTE)
     public void conditionalOTPNoDefault() {
         configureRequiredActions();
         configureOTP();
@@ -168,6 +172,7 @@ public class CustomAuthFlowOTPTest extends AbstractCustomAccountManagementTest {
     }
     
     @Test
+    @AuthServerContainerExclude(AuthServer.REMOTE)
     public void conditionalOTPNoDefaultWithChecks() {
         configureRequiredActions();
         configureOTP();
@@ -384,6 +389,7 @@ public class CustomAuthFlowOTPTest extends AbstractCustomAccountManagementTest {
     }
 
     @Test
+    @AuthServerContainerExclude(AuthServer.REMOTE)
     public void conditionalOTPRequestHeaderSkip() {
         //prepare config - request header skip, default to force
         Map<String, String> config = new HashMap<>();
@@ -400,6 +406,7 @@ public class CustomAuthFlowOTPTest extends AbstractCustomAccountManagementTest {
     }
 
     @Test
+    @AuthServerContainerExclude(AuthServer.REMOTE)
     public void conditionalOTPRequestHeaderForce() {
         //prepare config - equest header force, default to skip
         Map<String, String> config = new HashMap<>();

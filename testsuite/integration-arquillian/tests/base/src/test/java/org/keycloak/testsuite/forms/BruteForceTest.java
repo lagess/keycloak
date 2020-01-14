@@ -33,6 +33,7 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.keycloak.testsuite.AssertEvents;
 import org.keycloak.testsuite.AssertEvents.ExpectedEvent;
 import org.keycloak.testsuite.AbstractTestRealmKeycloakTest;
+import org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude;
 import org.keycloak.testsuite.pages.AppPage;
 import org.keycloak.testsuite.pages.AppPage.RequestType;
 import org.keycloak.testsuite.pages.LoginPage;
@@ -48,11 +49,14 @@ import java.net.MalformedURLException;
 import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
+import org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude.AuthServer;
+import static org.keycloak.testsuite.arquillian.annotation.AuthServerContainerExclude.AuthServer.REMOTE;
 
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
  * @author Stan Silvert ssilvert@redhat.com (C) 2016 Red Hat Inc.
  */
+@AuthServerContainerExclude(AuthServer.REMOTE)
 public class BruteForceTest extends AbstractTestRealmKeycloakTest {
 
     private static String userId;
@@ -60,11 +64,7 @@ public class BruteForceTest extends AbstractTestRealmKeycloakTest {
     @Override
     public void configureTestRealm(RealmRepresentation testRealm) {
         UserRepresentation user = RealmRepUtil.findUser(testRealm, "test-user@localhost");
-        CredentialRepresentation credRep = new CredentialRepresentation();
-        credRep.setType(CredentialRepresentation.TOTP);
-        credRep.setValue("totpSecret");
-        user.getCredentials().add(credRep);
-        user.setTotp(Boolean.TRUE);
+        UserBuilder.edit(user).totpSecret("totpSecret");
 
         testRealm.setBruteForceProtected(true);
         testRealm.setFailureFactor(2);
@@ -382,21 +382,6 @@ public class BruteForceTest extends AbstractTestRealmKeycloakTest {
     }
 
     @Test
-    public void testTotpGoingBack() throws Exception {
-        loginPage.open();
-        loginPage.login("test-user@localhost", "password");
-
-        continueLoginWithInvalidTotp();
-        loginTotpPage.cancel();
-        loginPage.assertCurrent();
-        loginPage.login("test-user@localhost", "password");
-        continueLoginWithInvalidTotp();
-        continueLoginWithCorrectTotpExpectFailure();
-        clearUserFailures();
-        continueLoginWithTotp();
-    }
-
-    @Test
     public void testBrowserMissingTotp() throws Exception {
         loginSuccess();
         loginWithMissingTotp();
@@ -471,6 +456,7 @@ public class BruteForceTest extends AbstractTestRealmKeycloakTest {
     }
 
     @Test
+    @AuthServerContainerExclude(REMOTE) // GreenMailRule is not working atm
     public void testResetPassword() throws Exception {
         String userId = adminClient.realm("test").users().search("test-user@localhost", null, null, null, 0, 1).get(0).getId();
 
@@ -527,7 +513,7 @@ public class BruteForceTest extends AbstractTestRealmKeycloakTest {
         loginPage.login(username, "password");
 
         loginPage.assertCurrent();
-        Assert.assertEquals("Account is disabled, contact admin.", loginPage.getError());
+        Assert.assertEquals("Account is disabled, contact your administrator.", loginPage.getError());
         ExpectedEvent event = events.expectLogin()
             .session((String) null)
             .error(Errors.USER_DISABLED)

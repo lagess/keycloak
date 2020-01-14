@@ -515,12 +515,6 @@ public class SAMLServletAdapterTest extends AbstractSAMLServletAdapterTest {
         checkLoggedOut(page, loginPage);
     }
 
-    private void checkLoggedOut(AbstractPage page, Login loginPage) {
-        page.navigateTo();
-        waitForPageToLoad();
-        assertCurrentUrlStartsWith(loginPage);
-    }
-
     @Test
     public void disabledClientTest() {
         ClientResource clientResource = ApiUtil.findClientResourceByClientId(testRealmResource(), AbstractSamlTest.SAML_CLIENT_ID_SALES_POST_SIG);
@@ -1153,34 +1147,6 @@ public class SAMLServletAdapterTest extends AbstractSAMLServletAdapterTest {
     }
 
     @Test
-    public void testErrorHandlingUnsigned() throws Exception {
-        SAML2ErrorResponseBuilder builder = new SAML2ErrorResponseBuilder()
-                .destination(employeeSigServletPage.toString() + "/saml")
-                .issuer("http://localhost:" + System.getProperty("auth.server.http.port", "8180") + "/realms/demo")
-                .status(JBossSAMLURIConstants.STATUS_REQUEST_DENIED.get());
-        Document document = builder.buildDocument();
-
-        new SamlClientBuilder()
-                .addStep((client, currentURI, currentResponse, context) ->
-                        Binding.REDIRECT.createSamlUnsignedResponse(URI.create(employeeSigServletPage.toString() + "/saml"), null, document))
-                .execute(closeableHttpResponse -> Assert.assertThat(closeableHttpResponse, bodyHC(containsString("INVALID_SIGNATURE"))));
-    }
-
-    @Test
-    public void testErrorHandlingSigned() throws Exception {
-        SAML2ErrorResponseBuilder builder = new SAML2ErrorResponseBuilder()
-                .destination(employeeSigServletPage.toString() + "/saml")
-                .issuer("http://localhost:" + System.getProperty("auth.server.http.port", "8180") + "/realms/demo")
-                .status(JBossSAMLURIConstants.STATUS_REQUEST_DENIED.get());
-        Document document = builder.buildDocument();
-
-        new SamlClientBuilder()
-                .addStep((client, currentURI, currentResponse, context) ->
-                        Binding.REDIRECT.createSamlSignedResponse(URI.create(employeeSigServletPage.toString() + "/saml"), null, document, REALM_PRIVATE_KEY, REALM_PUBLIC_KEY))
-                .execute(closeableHttpResponse -> Assert.assertThat(closeableHttpResponse, bodyHC(containsString("ERROR_STATUS"))));
-    }
-
-    @Test
     public void testRelayStateEncoding() throws Exception {
         // this test has a hardcoded SAMLRequest and we hack a SP face servlet to get the SAMLResponse so we can look
         // at the relay state
@@ -1382,118 +1348,6 @@ public class SAMLServletAdapterTest extends AbstractSAMLServletAdapterTest {
     }
 
     @Test
-    public void testAttributes() throws Exception {
-        ClientResource clientResource = ApiUtil.findClientResourceByClientId(testRealmResource(), AbstractSamlTest.SAML_CLIENT_ID_EMPLOYEE_2);
-        ProtocolMappersResource protocolMappersResource = clientResource.getProtocolMappers();
-
-        Map<String, String> config = new LinkedHashMap<>();
-        config.put("attribute.nameformat", "Basic");
-        config.put("user.attribute", "topAttribute");
-        config.put("attribute.name", "topAttribute");
-        getCleanup().addCleanup(createProtocolMapper(protocolMappersResource, "topAttribute", "saml", "saml-user-attribute-mapper", config));
-
-        config = new LinkedHashMap<>();
-        config.put("attribute.nameformat", "Basic");
-        config.put("user.attribute", "level2Attribute");
-        config.put("attribute.name", "level2Attribute");
-        getCleanup().addCleanup(createProtocolMapper(protocolMappersResource, "level2Attribute", "saml", "saml-user-attribute-mapper", config));
-
-        config = new LinkedHashMap<>();
-        config.put("attribute.nameformat", "Basic");
-        config.put("single", "true");
-        config.put("attribute.name", "group");
-        getCleanup().addCleanup(createProtocolMapper(protocolMappersResource, "groups", "saml", "saml-group-membership-mapper", config));
-
-        setRolesToCheck("manager,user");
-
-        employee2ServletPage.navigateTo();
-        assertCurrentUrlStartsWith(testRealmSAMLPostLoginPage);
-        testRealmSAMLPostLoginPage.form().login("level2GroupUser", "password");
-
-        driver.navigate().to(employee2ServletPage.getUriBuilder().clone().path("getAttributes").build().toURL());
-        waitUntilElement(By.xpath("//body")).text().contains("topAttribute: true");
-        waitUntilElement(By.xpath("//body")).text().contains("level2Attribute: true");
-        waitUntilElement(By.xpath("//body")).text().contains("attribute email: level2@redhat.com");
-        waitUntilElement(By.xpath("//body")).text().not().contains("group: []");
-        waitUntilElement(By.xpath("//body")).text().not().contains("group: null");
-        waitUntilElement(By.xpath("//body")).text().contains("group: [level2]");
-
-        employee2ServletPage.logout();
-        checkLoggedOut(employee2ServletPage, testRealmSAMLPostLoginPage);
-
-        setRolesToCheck("manager,employee,user");
-
-        employee2ServletPage.navigateTo();
-        assertCurrentUrlStartsWith(testRealmSAMLPostLoginPage);
-        testRealmSAMLPostLoginPage.form().login(bburkeUser);
-
-        driver.navigate().to(employee2ServletPage.getUriBuilder().clone().path("getAttributes").build().toURL());
-        waitUntilElement(By.xpath("//body")).text().contains("attribute email: bburke@redhat.com");
-        waitUntilElement(By.xpath("//body")).text().contains("friendlyAttribute email: bburke@redhat.com");
-        waitUntilElement(By.xpath("//body")).text().contains("phone: 617");
-        waitUntilElement(By.xpath("//body")).text().contains("friendlyAttribute phone: null");
-
-        driver.navigate().to(employee2ServletPage.getUriBuilder().clone().path("getAssertionFromDocument").build().toURL());
-        waitForPageToLoad();
-        Assert.assertEquals("", driver.getPageSource());
-
-        employee2ServletPage.logout();
-        checkLoggedOut(employee2ServletPage, testRealmSAMLPostLoginPage);
-
-        config = new LinkedHashMap<>();
-        config.put("attribute.value", "hard");
-        config.put("attribute.nameformat", "Basic");
-        config.put("attribute.name", "hardcoded-attribute");
-        getCleanup().addCleanup(createProtocolMapper(protocolMappersResource, "hardcoded-attribute", "saml", "saml-hardcode-attribute-mapper", config));
-
-        config = new LinkedHashMap<>();
-        config.put("role", "hardcoded-role");
-        getCleanup().addCleanup(createProtocolMapper(protocolMappersResource, "hardcoded-role", "saml", "saml-hardcode-role-mapper", config));
-
-        config = new LinkedHashMap<>();
-        config.put("new.role.name", "pee-on");
-        config.put("role", "http://localhost:8280/employee/.employee");
-        getCleanup().addCleanup(createProtocolMapper(protocolMappersResource, "renamed-employee-role", "saml", "saml-role-name-mapper", config));
-
-        for (ProtocolMapperRepresentation mapper : clientResource.toRepresentation().getProtocolMappers()) {
-            if (mapper.getName().equals("role-list")) {
-                protocolMappersResource.delete(mapper.getId());
-                Map<String, String> origConfig = new HashMap<>(mapper.getConfig());
-
-                mapper.setId(null);
-                mapper.getConfig().put(RoleListMapper.SINGLE_ROLE_ATTRIBUTE, "true");
-                mapper.getConfig().put(AttributeStatementHelper.SAML_ATTRIBUTE_NAME, "memberOf");
-
-                try (Response response = protocolMappersResource.createMapper(mapper)) {
-                    String createdId = getCreatedId(response);
-                    getCleanup().addCleanup((Runnable) () -> {
-                        protocolMappersResource.delete(createdId);
-                        mapper.setConfig(origConfig);
-                        protocolMappersResource.createMapper(mapper).close();
-                    });
-                }
-            }
-        }
-
-        setRolesToCheck("pee-on,el-jefe,manager,hardcoded-role");
-
-        config = new LinkedHashMap<>();
-        config.put("new.role.name", "el-jefe");
-        config.put("role", "user");
-        getCleanup().addCleanup(createProtocolMapper(protocolMappersResource, "renamed-role", "saml", "saml-role-name-mapper", config));
-
-        employee2ServletPage.navigateTo();
-        assertCurrentUrlStartsWith(testRealmSAMLPostLoginPage);
-        testRealmSAMLPostLoginPage.form().login(bburkeUser);
-
-        driver.navigate().to(employee2ServletPage.getUriBuilder().clone().path("getAttributes").build().toURL());
-        waitUntilElement(By.xpath("//body")).text().contains("hardcoded-attribute: hard");
-        employee2ServletPage.checkRolesEndPoint(false);
-        employee2ServletPage.logout();
-        checkLoggedOut(employee2ServletPage, testRealmSAMLPostLoginPage);
-    }
-
-    @Test
     public void idpMetadataValidation() throws Exception {
         driver.navigate().to(authServerPage.toString() + "/realms/" + SAMLSERVLETDEMO + "/protocol/saml/descriptor");
         validateXMLWithSchema(driver.getPageSource(), "/adapter-test/keycloak-saml/metadata-schema/saml-schema-metadata-2.0.xsd");
@@ -1581,6 +1435,27 @@ public class SAMLServletAdapterTest extends AbstractSAMLServletAdapterTest {
                 final Node nameIdNode = nodeList.item(0);
                 nameIdNode.getParentNode().removeChild(nameIdNode);
 
+                return responseDoc;
+            })
+            .build()
+
+          .navigateTo(employee2ServletPage.toString())
+
+          .execute(r -> {
+              Assert.assertThat(r, statusCodeIsHC(Response.Status.OK));
+              Assert.assertThat(r, bodyHC(containsString("principal=")));
+          });
+    }
+
+    @Test
+    public void testDestinationUnset() throws Exception {
+        new SamlClientBuilder()
+          .navigateTo(employee2ServletPage.toString())
+          .processSamlResponse(Binding.POST).build()
+          .login().user(bburkeUser).build()
+          .processSamlResponse(Binding.POST)
+            .transformDocument(responseDoc -> {
+                responseDoc.getDocumentElement().removeAttribute("Destination");
                 return responseDoc;
             })
             .build()
@@ -1703,8 +1578,8 @@ public class SAMLServletAdapterTest extends AbstractSAMLServletAdapterTest {
 
         //printDocument(authnRequestMessage.getSOAPPart().getContent(), System.out);
 
-        Iterator<SOAPHeaderElement> it = authnRequestMessage.getSOAPHeader().<SOAPHeaderElement>getChildElements(new QName("urn:oasis:names:tc:SAML:2.0:profiles:SSO:ecp", "Request"));
-        SOAPHeaderElement ecpRequestHeader = it.next();
+        Iterator<javax.xml.soap.Node> it = authnRequestMessage.getSOAPHeader().<SOAPHeaderElement>getChildElements(new QName("urn:oasis:names:tc:SAML:2.0:profiles:SSO:ecp", "Request"));
+        SOAPHeaderElement ecpRequestHeader = (SOAPHeaderElement)it.next();
         NodeList idpList = ecpRequestHeader.getElementsByTagNameNS("urn:oasis:names:tc:SAML:2.0:protocol", "IDPList");
 
         Assert.assertThat("No IDPList returned from Service Provider", idpList.getLength(), is(1));
@@ -1790,13 +1665,13 @@ public class SAMLServletAdapterTest extends AbstractSAMLServletAdapterTest {
                 .get();
 
         SOAPMessage authnRequestMessage = MessageFactory.newInstance().createMessage(null, new ByteArrayInputStream(authnRequestResponse.readEntity(byte[].class)));
-        Iterator<SOAPHeaderElement> it = authnRequestMessage.getSOAPHeader().<SOAPHeaderElement>getChildElements(new QName("urn:liberty:paos:2003-08", "Request"));
+        Iterator<javax.xml.soap.Node> it = authnRequestMessage.getSOAPHeader().<SOAPHeaderElement>getChildElements(new QName("urn:liberty:paos:2003-08", "Request"));
 
         it.next();
 
         it = authnRequestMessage.getSOAPHeader().<SOAPHeaderElement>getChildElements(new QName("urn:oasis:names:tc:SAML:2.0:profiles:SSO:ecp", "Request"));
-        SOAPHeaderElement ecpRequestHeader = it.next();
-        NodeList idpList = ecpRequestHeader.getElementsByTagNameNS("urn:oasis:names:tc:SAML:2.0:protocol", "IDPList");
+        javax.xml.soap.Node ecpRequestHeader = it.next();
+        NodeList idpList = ((SOAPHeaderElement)ecpRequestHeader).getElementsByTagNameNS("urn:oasis:names:tc:SAML:2.0:protocol", "IDPList");
 
         Assert.assertThat("No IDPList returned from Service Provider", idpList.getLength(), is(1));
 
@@ -1916,27 +1791,6 @@ public class SAMLServletAdapterTest extends AbstractSAMLServletAdapterTest {
             System.out.println("Reason: " + e.getLocalizedMessage());
             Assert.fail();
         }
-    }
-
-    private AutoCloseable createProtocolMapper(ProtocolMappersResource resource, String name, String protocol, String protocolMapper, Map<String, String> config) {
-        ProtocolMapperRepresentation representation = new ProtocolMapperRepresentation();
-        representation.setName(name);
-        representation.setProtocol(protocol);
-        representation.setProtocolMapper(protocolMapper);
-        representation.setConfig(config);
-        try (Response response = resource.createMapper(representation)) {
-            String createdId = getCreatedId(response);
-            return () -> resource.delete(createdId);
-        }
-    }
-
-    private void setRolesToCheck(String roles) throws Exception {
-        employee2ServletPage.navigateTo();
-        assertCurrentUrlStartsWith(testRealmSAMLPostLoginPage);
-        testRealmSAMLPostLoginPage.form().login(bburkeUser);
-        driver.navigate().to(employee2ServletPage.getUriBuilder().clone().path("setCheckRoles").queryParam("roles", roles).build().toURL());
-        WaitUtils.waitUntilElement(By.tagName("body")).text().contains("These roles will be checked:");
-        employee2ServletPage.logout();
     }
 
     private void assertOnForbiddenPage() {

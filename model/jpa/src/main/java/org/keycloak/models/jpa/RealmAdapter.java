@@ -28,13 +28,12 @@ import org.keycloak.models.utils.ComponentUtil;
 import org.keycloak.models.utils.KeycloakModelUtils;
 
 import javax.persistence.EntityManager;
+import javax.persistence.LockModeType;
 import javax.persistence.TypedQuery;
-
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import javax.persistence.LockModeType;
 import static java.util.Objects.nonNull;
 
 /**
@@ -46,6 +45,12 @@ public class RealmAdapter implements RealmModel, JpaModel<RealmEntity> {
     protected RealmEntity realm;
     protected EntityManager em;
     protected KeycloakSession session;
+
+    @Override
+    public Long getClientsCount() {
+        return session.realms().getClientsCount(this);
+    }
+
     private PasswordPolicy passwordPolicy;
     private OTPPolicy otpPolicy;
 
@@ -587,6 +592,9 @@ public class RealmAdapter implements RealmModel, JpaModel<RealmEntity> {
 
     @Override
     public int getActionTokenGeneratedByUserLifespan(String actionTokenId) {
+        if (actionTokenId == null || getAttribute(RealmAttributes.ACTION_TOKEN_GENERATED_BY_USER_LIFESPAN + "." + actionTokenId) == null) {
+            return getActionTokenGeneratedByUserLifespan();
+        }
         return getAttribute(RealmAttributes.ACTION_TOKEN_GENERATED_BY_USER_LIFESPAN + "." + actionTokenId, getAccessCodeLifespanUserAction());
     }
 
@@ -779,10 +787,19 @@ public class RealmAdapter implements RealmModel, JpaModel<RealmEntity> {
         }
 
     }
-
     @Override
     public List<ClientModel> getClients() {
         return session.realms().getClients(this);
+    }
+
+    @Override
+    public List<ClientModel> getClients(Integer firstResult, Integer maxResults) {
+        return session.realms().getClients(this, firstResult, maxResults);
+    }
+
+    @Override
+    public List<ClientModel> getAlwaysDisplayInConsoleClients() {
+        return session.realms().getAlwaysDisplayInConsoleClients(this);
     }
 
     @Override
@@ -811,6 +828,11 @@ public class RealmAdapter implements RealmModel, JpaModel<RealmEntity> {
     @Override
     public ClientModel getClientByClientId(String clientId) {
         return session.realms().getClientByClientId(clientId, this);
+    }
+
+    @Override
+    public List<ClientModel> searchClientByClientId(String clientId, Integer firstResult, Integer maxResults) {
+        return session.realms().searchClientsByClientId(clientId, firstResult, maxResults, this);
     }
 
     private static final String BROWSER_HEADER_PREFIX = "_browser_header.";
@@ -1669,6 +1691,16 @@ public class RealmAdapter implements RealmModel, JpaModel<RealmEntity> {
         return entityToModel(entity);
     }
 
+    public AuthenticationExecutionModel getAuthenticationExecutionByFlowId(String flowId) {
+        TypedQuery<AuthenticationExecutionEntity> query = em.createNamedQuery("authenticationFlowExecution", AuthenticationExecutionEntity.class)
+                .setParameter("flowId", flowId);
+        if (query.getResultList().isEmpty()) {
+            return null;
+        }
+        AuthenticationExecutionEntity authenticationFlowExecution = query.getResultList().get(0);
+        return entityToModel(authenticationFlowExecution);
+    }
+
     @Override
     public AuthenticationExecutionModel addAuthenticatorExecution(AuthenticationExecutionModel model) {
         AuthenticationExecutionEntity entity = new AuthenticationExecutionEntity();
@@ -1700,6 +1732,10 @@ public class RealmAdapter implements RealmModel, JpaModel<RealmEntity> {
         entity.setRequirement(model.getRequirement());
         entity.setAuthenticatorConfig(model.getAuthenticatorConfig());
         entity.setFlowId(model.getFlowId());
+        if (model.getParentFlow() != null) {
+            AuthenticationFlowEntity flow = em.find(AuthenticationFlowEntity.class, model.getParentFlow());
+            entity.setParentFlow(flow);
+        }
         em.flush();
     }
 
