@@ -20,7 +20,9 @@ pipeline {
       }
       steps {
         script {
+          sh 'printenv'
           sh """
+            rm ~/.m2/settings.xml
             mvn -B -T4 -Pdistribution -pl distribution/server-dist -am -DskipTests=params.SKIP_TESTS clean package
           """
           if (params.CREATE_RELEASE == "true"){
@@ -29,11 +31,11 @@ pipeline {
             withCredentials([usernamePassword(credentialsId: 'cloudtrust-cicd-artifactory-opaque', usernameVariable: 'USR', passwordVariable: 'PWD')]){
               sh """
                 cd distribution/server-dist/target
-                mv "${APP}-?.?.?*.tar.gz ${APP}-${params.VERSION}.tar.gz
+                mv "${APP}"-?.?.?*.tar.gz "${APP}-${params.VERSION}.tar.gz"
                 curl -u"${USR}:${PWD}" -T "${APP}-${params.VERSION}.tar.gz" --keepalive-time 2 "${REPO_URL}/${APP}-${params.VERSION}.tar.gz"
               """
             }
-            def git_url = "${env.GIT_URL_1}".replaceFirst("^(http[s]?://www\\.|http[s]?://|www\\.)","")
+            def git_url = "${env.GIT_URL}".replaceFirst("^(http[s]?://www\\.|http[s]?://|www\\.)","")
             withCredentials([usernamePassword(credentialsId: "bgu",
                 passwordVariable: 'PWD',
                 usernameVariable: 'USR')]) {
