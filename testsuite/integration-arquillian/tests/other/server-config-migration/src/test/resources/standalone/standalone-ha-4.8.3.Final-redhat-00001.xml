@@ -231,6 +231,7 @@
                 <distributed-cache name="clientSessions" owners="1"/>
                 <distributed-cache name="offlineClientSessions" owners="1"/>
                 <distributed-cache name="loginFailures" owners="1"/>
+                <distributed-cache name="artifacts" owners="1"/>
                 <local-cache name="authorization">
                     <object-memory size="10000"/>
                 </local-cache>

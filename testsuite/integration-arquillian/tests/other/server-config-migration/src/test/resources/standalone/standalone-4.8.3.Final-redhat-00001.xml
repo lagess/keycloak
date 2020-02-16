@@ -228,6 +228,7 @@
                 <local-cache name="clientSessions"/>
                 <local-cache name="offlineClientSessions"/>
                 <local-cache name="loginFailures"/>
+                <local-cache name="artifacts"/>
                 <local-cache name="work"/>
                 <local-cache name="authorization">
                     <object-memory size="10000"/>

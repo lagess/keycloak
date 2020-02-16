@@ -206,6 +206,7 @@
                 <local-cache name="sessions"/>
                 <local-cache name="offlineSessions"/>
                 <local-cache name="loginFailures"/>
+                <local-cache name="artifacts"/>
             </cache-container>
             <cache-container name="server" default-cache="default" module="org.wildfly.clustering.server">
                 <local-cache name="default">

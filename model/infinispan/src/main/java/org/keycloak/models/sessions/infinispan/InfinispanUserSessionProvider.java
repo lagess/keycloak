@@ -39,6 +39,8 @@ import org.keycloak.models.UserSessionProvider;
 import org.keycloak.models.sessions.infinispan.changes.Tasks;
 import org.keycloak.models.sessions.infinispan.changes.sessions.CrossDCLastSessionRefreshStore;
 import org.keycloak.models.sessions.infinispan.changes.sessions.PersisterLastSessionRefreshStore;
+import org.keycloak.models.sessions.infinispan.entities.ArtifactEntity;
+import org.keycloak.models.sessions.infinispan.entities.SessionEntity;
 import org.keycloak.models.sessions.infinispan.remotestore.RemoteCacheInvoker;
 import org.keycloak.models.sessions.infinispan.changes.SessionEntityWrapper;
 import org.keycloak.models.sessions.infinispan.changes.InfinispanChangelogBasedTransaction;
@@ -95,12 +97,14 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
     protected final Cache<UUID, SessionEntityWrapper<AuthenticatedClientSessionEntity>> clientSessionCache;
     protected final Cache<UUID, SessionEntityWrapper<AuthenticatedClientSessionEntity>> offlineClientSessionCache;
     protected final Cache<LoginFailureKey, SessionEntityWrapper<LoginFailureEntity>> loginFailureCache;
+    protected final Cache<String, SessionEntityWrapper<ArtifactEntity>> artifactCache;
 
     protected final InfinispanChangelogBasedTransaction<String, UserSessionEntity> sessionTx;
     protected final InfinispanChangelogBasedTransaction<String, UserSessionEntity> offlineSessionTx;
     protected final InfinispanChangelogBasedTransaction<UUID, AuthenticatedClientSessionEntity> clientSessionTx;
     protected final InfinispanChangelogBasedTransaction<UUID, AuthenticatedClientSessionEntity> offlineClientSessionTx;
     protected final InfinispanChangelogBasedTransaction<LoginFailureKey, LoginFailureEntity> loginFailuresTx;
+    protected final InfinispanChangelogBasedTransaction<String, ArtifactEntity> artifactTx;
 
     protected final SessionEventsSenderTransaction clusterEventsSenderTx;
 
@@ -121,7 +125,8 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
                                          Cache<String, SessionEntityWrapper<UserSessionEntity>> offlineSessionCache,
                                          Cache<UUID, SessionEntityWrapper<AuthenticatedClientSessionEntity>> clientSessionCache,
                                          Cache<UUID, SessionEntityWrapper<AuthenticatedClientSessionEntity>> offlineClientSessionCache,
-                                         Cache<LoginFailureKey, SessionEntityWrapper<LoginFailureEntity>> loginFailureCache) {
+                                         Cache<LoginFailureKey, SessionEntityWrapper<LoginFailureEntity>> loginFailureCache,
+                                         Cache<String, SessionEntityWrapper<ArtifactEntity>> artifactCache) {
         this.session = session;
 
         this.sessionCache = sessionCache;
@@ -129,13 +134,14 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
         this.offlineSessionCache = offlineSessionCache;
         this.offlineClientSessionCache = offlineClientSessionCache;
         this.loginFailureCache = loginFailureCache;
+        this.artifactCache = artifactCache;
 
         this.sessionTx = new InfinispanChangelogBasedTransaction<>(session, sessionCache, remoteCacheInvoker);
         this.offlineSessionTx = new InfinispanChangelogBasedTransaction<>(session, offlineSessionCache, remoteCacheInvoker);
         this.clientSessionTx = new InfinispanChangelogBasedTransaction<>(session, clientSessionCache, remoteCacheInvoker);
         this.offlineClientSessionTx = new InfinispanChangelogBasedTransaction<>(session, offlineClientSessionCache, remoteCacheInvoker);
-
         this.loginFailuresTx = new InfinispanChangelogBasedTransaction<>(session, loginFailureCache, remoteCacheInvoker);
+        this.artifactTx = new InfinispanChangelogBasedTransaction<>(session, artifactCache, remoteCacheInvoker);
 
         this.clusterEventsSenderTx = new SessionEventsSenderTransaction(session);
 
@@ -151,6 +157,7 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
         session.getTransactionManager().enlistAfterCompletion(clientSessionTx);
         session.getTransactionManager().enlistAfterCompletion(offlineClientSessionTx);
         session.getTransactionManager().enlistAfterCompletion(loginFailuresTx);
+        session.getTransactionManager().enlistAfterCompletion(artifactTx);
     }
 
     protected Cache<String, SessionEntityWrapper<UserSessionEntity>> getCache(boolean offline) {
