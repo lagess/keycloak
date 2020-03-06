@@ -76,7 +76,8 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                 .clients().get(salesRep.getId())
                 .update(ClientBuilder.edit(salesRep)
                         .attribute(SamlConfigAttributes.SAML_SERVER_SIGNATURE, "false")
-                        .attribute(SamlConfigAttributes.SAML_ARTIFACT_BINDING, "false")
+                        .attribute(SamlConfigAttributes.SAML_FORCE_AUTHN_ARTIFACT_BINDING, "false")
+                        .attribute(SamlConfigAttributes.SAML_FORCE_LOGOUT_ARTIFACT_BINDING, "false")
                         .removeAttribute(SamlProtocol.SAML_ARTIFACT_RESOLUTION_SERVICE_URL_ATTRIBUTE)
                         .build());
     }
@@ -206,7 +207,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
         adminClient.realm(REALM_NAME)
                 .clients().get(salesRep.getId())
                 .update(ClientBuilder.edit(salesRep)
-                        .attribute(SamlConfigAttributes.SAML_ARTIFACT_BINDING, "true")
+                        .attribute(SamlConfigAttributes.SAML_FORCE_AUTHN_ARTIFACT_BINDING, "true")
                         .build());
 
         SAMLDocumentHolder response = new SamlClientBuilder().authnRequest(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST,
@@ -230,7 +231,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
         adminClient.realm(REALM_NAME)
                 .clients().get(salesRep.getId())
                 .update(ClientBuilder.edit(salesRep)
-                        .attribute(SamlConfigAttributes.SAML_ARTIFACT_BINDING, "true")
+                        .attribute(SamlConfigAttributes.SAML_FORCE_AUTHN_ARTIFACT_BINDING, "true")
                         .attribute(SamlConfigAttributes.SAML_SERVER_SIGNATURE, "true")
                         .build());
 
@@ -486,7 +487,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
         adminClient.realm(REALM_NAME)
                 .clients().get(salesRep.getId())
                 .update(ClientBuilder.edit(salesRep)
-                        .attribute(SamlConfigAttributes.SAML_ARTIFACT_BINDING, "true")
+                        .attribute(SamlConfigAttributes.SAML_FORCE_LOGOUT_ARTIFACT_BINDING, "true")
                         .attribute(SamlConfigAttributes.SAML_SERVER_SIGNATURE, "true")
                         .frontchannelLogout(true)
                         .attribute(SamlProtocol.SAML_SINGLE_LOGOUT_SERVICE_URL_POST_ATTRIBUTE, "http://url")
@@ -528,7 +529,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
         adminClient.realm(REALM_NAME)
                 .clients().get(salesRep.getId())
                 .update(ClientBuilder.edit(salesRep)
-                        .attribute(SamlConfigAttributes.SAML_ARTIFACT_BINDING, "true")
+                        .attribute(SamlConfigAttributes.SAML_FORCE_LOGOUT_ARTIFACT_BINDING, "true")
                         .frontchannelLogout(true)
                         .attribute(SamlProtocol.SAML_SINGLE_LOGOUT_SERVICE_URL_POST_ATTRIBUTE, "http://url")
                         .build());
@@ -559,7 +560,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
         adminClient.realm(REALM_NAME)
                 .clients().get(salesRep.getId())
                 .update(ClientBuilder.edit(salesRep)
-                        .attribute(SamlConfigAttributes.SAML_ARTIFACT_BINDING, "true")
+                        .attribute(SamlConfigAttributes.SAML_FORCE_LOGOUT_ARTIFACT_BINDING, "true")
                         .frontchannelLogout(true)
                         .attribute(SamlProtocol.SAML_SINGLE_LOGOUT_SERVICE_URL_REDIRECT_ATTRIBUTE, "http://url")
                         .build());
@@ -592,7 +593,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
         adminClient.realm(REALM_NAME)
                 .clients().get(salesRepSig.getId())
                 .update(ClientBuilder.edit(salesRepSig)
-                        .attribute(SamlConfigAttributes.SAML_ARTIFACT_BINDING, "true")
+                        .attribute(SamlConfigAttributes.SAML_FORCE_LOGOUT_ARTIFACT_BINDING, "true")
                         .frontchannelLogout(true)
                         .attribute(SamlProtocol.SAML_SINGLE_LOGOUT_SERVICE_URL_POST_ATTRIBUTE, "http://url")
                         .build());
@@ -631,7 +632,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
         adminClient.realm(REALM_NAME)
                 .clients().get(salesRep.getId())
                 .update(ClientBuilder.edit(salesRep)
-                        .attribute(SamlConfigAttributes.SAML_ARTIFACT_BINDING, "true")
+                        .attribute(SamlConfigAttributes.SAML_FORCE_LOGOUT_ARTIFACT_BINDING, "true")
                         .frontchannelLogout(true)
                         .attribute(SamlProtocol.SAML_SINGLE_LOGOUT_SERVICE_URL_REDIRECT_ATTRIBUTE, "http://url")
                         .build());

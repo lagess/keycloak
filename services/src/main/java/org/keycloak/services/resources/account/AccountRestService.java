@@ -145,7 +145,6 @@ public class AccountRestService {
     @NoCache
     public Response updateAccount(UserRepresentation userRep) {
         auth.require(AccountRoles.MANAGE_ACCOUNT);
-
         event.event(EventType.UPDATE_PROFILE).client(auth.getClient()).user(user);
 
         try {

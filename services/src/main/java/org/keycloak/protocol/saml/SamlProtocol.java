@@ -117,6 +117,7 @@ public class SamlProtocol implements LoginProtocol {
     public static final String SAML_POST_BINDING = "post";
     public static final String SAML_SOAP_BINDING = "soap";
     public static final String SAML_REDIRECT_BINDING = "get";
+    public static final String SAML_ARTIFACT_BINDING = "artifact";
     public static final String SAML_REQUEST_ID = "SAML_REQUEST_ID";
     public static final String SAML_LOGOUT_BINDING = "saml.logout.binding";
     public static final String SAML_LOGOUT_ADD_EXTENSIONS_ELEMENT_WITH_KEY_INFO = "saml.logout.addExtensionsElementWithKeyInfo";
@@ -682,9 +683,8 @@ public class SamlProtocol implements LoginProtocol {
     protected Response buildLogoutResponse(UserSessionModel userSession, String logoutBindingUri, SAML2LogoutResponseBuilder builder, JaxrsSAML2BindingBuilder binding) throws ConfigurationException, ProcessingException, IOException {
 
         Document samlDocument = builder.buildDocument();
-        //if artifact binding is used, send an artifact instead of the LogoutResponse and defer the cleanup of the userSession
+        //if artifact binding is used, send an artifact instead of the LogoutResponse
         if ("true".equals(userSession.getNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get()))){
-            userSession.setNote(AuthenticationManager.DEFER_CLEANUP, "true");
             return buildLogoutArtifactResponse(userSession, logoutBindingUri, samlDocument, binding);
         }
 
@@ -818,7 +818,7 @@ public class SamlProtocol implements LoginProtocol {
         Document artifactResponse = SamlProtocolUtils.buildArtifactResponse(samlDocument);
         bindingBuilder.postBinding(artifactResponse); //this step performs necessary signatures and encryption
 
-        clientSession.setNote(artifact, DocumentUtil.getDocumentAsString(artifactResponse));
+        session.sessions().addArtifactResponse(realm.getId(), artifact, DocumentUtil.getDocumentAsString(artifactResponse));
 
         //return message with artifact
         String relayState = clientSession.getNote(GeneralConstants.RELAY_STATE);
@@ -855,7 +855,7 @@ public class SamlProtocol implements LoginProtocol {
         Document artifactResponse = SamlProtocolUtils.buildArtifactResponse(samlDocument);
         bindingBuilder.postBinding(artifactResponse); //this step performs necessary signatures and encryption
 
-        userSession.setNote(artifact, DocumentUtil.getDocumentAsString(artifactResponse));
+        session.sessions().addArtifactResponse(realm.getId(), artifact, DocumentUtil.getDocumentAsString(artifactResponse));
 
         //return message with artifact
         String relayState = userSession.getNote(SAML_LOGOUT_RELAY_STATE);

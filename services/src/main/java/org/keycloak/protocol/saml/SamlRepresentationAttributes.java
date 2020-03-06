@@ -61,9 +61,14 @@ public class SamlRepresentationAttributes {
         return getAttributes().get(SamlConfigAttributes.SAML_FORCE_NAME_ID_FORMAT_ATTRIBUTE);
     }
 
-    public String getSamlArtifactBinding() {
+    public String getSamlForceAuthnArtifactBinding() {
         if (getAttributes() == null) return null;
-        return getAttributes().get(SamlConfigAttributes.SAML_ARTIFACT_BINDING);
+        return getAttributes().get(SamlConfigAttributes.SAML_FORCE_AUTHN_ARTIFACT_BINDING);
+    }
+
+    public String getSamlForceLogoutArtifactBinding() {
+        if (getAttributes() == null) return null;
+        return getAttributes().get(SamlConfigAttributes.SAML_FORCE_LOGOUT_ARTIFACT_BINDING);
     }
 
     public String getSamlServerSignature() {

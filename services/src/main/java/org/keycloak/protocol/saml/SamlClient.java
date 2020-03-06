@@ -116,12 +116,20 @@ public class SamlClient extends ClientConfigResolver {
         client.setAttribute(SamlConfigAttributes.SAML_FORCE_NAME_ID_FORMAT_ATTRIBUTE, Boolean.toString(val));
     }
 
-    public boolean forceArtifactBinding(){
-        return "true".equals(resolveAttribute(SamlConfigAttributes.SAML_ARTIFACT_BINDING));
+    public boolean forceAuthnArtifactBinding(){
+        return "true".equals(resolveAttribute(SamlConfigAttributes.SAML_FORCE_AUTHN_ARTIFACT_BINDING));
     }
 
-    public void setForceArtifactBinding(boolean val) {
-        client.setAttribute(SamlConfigAttributes.SAML_ARTIFACT_BINDING, Boolean.toString(val));
+    public void setForceAuthnArtifactBinding(boolean val) {
+        client.setAttribute(SamlConfigAttributes.SAML_FORCE_AUTHN_ARTIFACT_BINDING, Boolean.toString(val));
+    }
+
+    public boolean forceLogoutArtifactBinding(){
+        return "true".equals(resolveAttribute(SamlConfigAttributes.SAML_FORCE_LOGOUT_ARTIFACT_BINDING));
+    }
+
+    public void setForceLogoutArtifactBinding(boolean val) {
+        client.setAttribute(SamlConfigAttributes.SAML_FORCE_LOGOUT_ARTIFACT_BINDING, Boolean.toString(val));
     }
 
     public boolean requiresRealmSignature() {

@@ -422,7 +422,7 @@ public class SamlService extends AuthorizationEndpointBase {
             } else {
                 if ((requestAbstractType.getProtocolBinding() != null && JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.getUri()
                         .compareTo(requestAbstractType.getProtocolBinding()) == 0)
-                        || new SamlClient(client).forceArtifactBinding()) {
+                        || new SamlClient(client).forceAuthnArtifactBinding()) {
                     redirect = client.getAttribute(SamlProtocol.SAML_ASSERTION_CONSUMER_URL_ARTIFACT_ATTRIBUTE);
                 } else if (bindingType.equals(SamlProtocol.SAML_POST_BINDING)) {
                     redirect = client.getAttribute(SamlProtocol.SAML_ASSERTION_CONSUMER_URL_POST_ATTRIBUTE);
@@ -445,7 +445,7 @@ public class SamlService extends AuthorizationEndpointBase {
             // determine if artifact binding should be used to answer the login request
             if ((requestAbstractType.getProtocolBinding() != null && JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.getUri()
                     .compareTo(requestAbstractType.getProtocolBinding()) == 0)
-                    || new SamlClient(client).forceArtifactBinding()) {
+                    || new SamlClient(client).forceAuthnArtifactBinding()) {
                 authSession.setClientNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get(), "true");
             }
 
@@ -570,7 +570,7 @@ public class SamlService extends AuthorizationEndpointBase {
                     clientSession.setAction(AuthenticationSessionModel.Action.LOGGED_OUT.name());
                     //artifact binding state must be attached to the user session upon logout, as authenticated session
                     //no longer exists when the LogoutResponse message is sent
-                    if ("true".equals(clientSession.getNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get()))){
+                    if (samlClient.forceLogoutArtifactBinding()){
                         userSession.setNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get(), "true");
                     }
                 }
@@ -1038,26 +1038,12 @@ public class SamlService extends AuthorizationEndpointBase {
      * @throws ProcessingException
      */
     private String getArtifact(ClientModel client, String artifact) throws ParsingException, ConfigurationException, ProcessingException {
-        List<UserSessionModel> userSessions = session.sessions().getUserSessions(realm, client);
-        for (UserSessionModel userSession: userSessions) {
-            AuthenticatedClientSessionModel clientSession = userSession.getAuthenticatedClientSessionByClient(client.getId());
-            if (clientSession != null) {
-                String response = clientSession.getNote(artifact);
-                if (response != null && ! response.isEmpty()) {
-                    clientSession.removeNote(artifact);
-                    return response;
-                }
-            }
+        String artifactResponse = session.sessions().getArtifactResponse(artifact);
+        if (artifactResponse != null) {
+            session.sessions().removeArtifactResponse(artifact);
+            return artifactResponse;
         }
-        //check if it is the logout message
-        for (UserSessionModel userSession: userSessions) {
-            String response = userSession.getNote(artifact);
-            if (response != null && ! response.isEmpty()) {
-                userSession.removeNote(artifact);
-                session.sessions().removeUserSession(realm, userSession);
-                return response;
-            }
-        }
+
         throw new ProcessingException("Cannot find artifact "+ artifact + " in cache");
     }
 

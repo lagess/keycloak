@@ -1021,7 +1021,8 @@ module.controller('ClientDetailCtrl', function($scope, realm, client, flows, $ro
     $scope.samlAuthnStatement = false;
     $scope.samlOneTimeUseCondition = false;
     $scope.samlMultiValuedRoles = false;
-    $scope.samlArtifactBinding = false;
+    $scope.samlForceAuthnArtifactBinding = false;
+    $scope.samlForceLogoutArtifactBinding = false;
     $scope.samlServerSignature = false;
     $scope.samlServerSignatureEnableKeyInfoExtension = false;
     $scope.samlAssertionSignature = false;
@@ -1092,14 +1093,21 @@ module.controller('ClientDetailCtrl', function($scope, realm, client, flows, $ro
             $scope.nameIdFormat = $scope.nameIdFormats[3];
         }
 
-
-        if ($scope.client.attributes["saml.artifact.binding"]) {
-            if ($scope.client.attributes["saml.artifact.binding"] == "true") {
-                $scope.samlArtifactBinding = true;
+        if ($scope.client.attributes["saml.force.authn.artifact.binding"]) {
+            if ($scope.client.attributes["saml.force.authn.artifact.binding"] == "true") {
+                $scope.samlForceAuthnArtifactBinding = true;
             } else {
-                $scope.samlArtifactBinding = false;
+                $scope.samlForceAuthnArtifactBinding = false;
             }
         }
+
+        if ($scope.client.attributes["saml.force.logout.artifact.binding"]) {
+            if ($scope.client.attributes["saml.force.logout.artifact.binding"] == "true") {
+                $scope.samlForceLogoutArtifactBinding = true;
+            } else {
+                $scope.samlForceLogoutArtifactBinding = false;
+            }
+         }
 
         if ($scope.client.attributes["saml.server.signature"]) {
             if ($scope.client.attributes["saml.server.signature"] == "true") {
@@ -1430,10 +1438,15 @@ module.controller('ClientDetailCtrl', function($scope, realm, client, flows, $ro
             $scope.addWebOrigin();
         }
 
-        if ($scope.samlArtifactBinding == true) {
-            $scope.clientEdit.attributes["saml.artifact.binding"] = "true";
+        if ($scope.samlForceAuthnArtifactBinding == true) {
+            $scope.clientEdit.attributes["saml.force.authn.artifact.binding"] = "true";
         } else {
-            $scope.clientEdit.attributes["saml.artifact.binding"] = "false";
+            $scope.clientEdit.attributes["saml.force.authn.artifact.binding"] = "false";
+        }
+        if ($scope.samlForceLogoutArtifactBinding == true) {
+            $scope.clientEdit.attributes["saml.force.logout.artifact.binding"] = "true";
+        } else {
+            $scope.clientEdit.attributes["saml.force.logout.artifact.binding"] = "false";
         }
         if ($scope.samlServerSignature == true) {
             $scope.clientEdit.attributes["saml.server.signature"] = "true";

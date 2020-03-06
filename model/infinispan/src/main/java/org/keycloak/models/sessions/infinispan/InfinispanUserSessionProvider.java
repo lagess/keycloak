@@ -39,8 +39,7 @@ import org.keycloak.models.UserSessionProvider;
 import org.keycloak.models.sessions.infinispan.changes.Tasks;
 import org.keycloak.models.sessions.infinispan.changes.sessions.CrossDCLastSessionRefreshStore;
 import org.keycloak.models.sessions.infinispan.changes.sessions.PersisterLastSessionRefreshStore;
-import org.keycloak.models.sessions.infinispan.entities.ArtifactEntity;
-import org.keycloak.models.sessions.infinispan.entities.SessionEntity;
+import org.keycloak.models.sessions.infinispan.entities.ArtifactResponseEntity;
 import org.keycloak.models.sessions.infinispan.remotestore.RemoteCacheInvoker;
 import org.keycloak.models.sessions.infinispan.changes.SessionEntityWrapper;
 import org.keycloak.models.sessions.infinispan.changes.InfinispanChangelogBasedTransaction;
@@ -97,14 +96,14 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
     protected final Cache<UUID, SessionEntityWrapper<AuthenticatedClientSessionEntity>> clientSessionCache;
     protected final Cache<UUID, SessionEntityWrapper<AuthenticatedClientSessionEntity>> offlineClientSessionCache;
     protected final Cache<LoginFailureKey, SessionEntityWrapper<LoginFailureEntity>> loginFailureCache;
-    protected final Cache<String, SessionEntityWrapper<ArtifactEntity>> artifactCache;
+    protected final Cache<String, SessionEntityWrapper<ArtifactResponseEntity>> artifactCache;
 
     protected final InfinispanChangelogBasedTransaction<String, UserSessionEntity> sessionTx;
     protected final InfinispanChangelogBasedTransaction<String, UserSessionEntity> offlineSessionTx;
     protected final InfinispanChangelogBasedTransaction<UUID, AuthenticatedClientSessionEntity> clientSessionTx;
     protected final InfinispanChangelogBasedTransaction<UUID, AuthenticatedClientSessionEntity> offlineClientSessionTx;
     protected final InfinispanChangelogBasedTransaction<LoginFailureKey, LoginFailureEntity> loginFailuresTx;
-    protected final InfinispanChangelogBasedTransaction<String, ArtifactEntity> artifactTx;
+    protected final InfinispanChangelogBasedTransaction<String, ArtifactResponseEntity> artifactTx;
 
     protected final SessionEventsSenderTransaction clusterEventsSenderTx;
 
@@ -126,7 +125,7 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
                                          Cache<UUID, SessionEntityWrapper<AuthenticatedClientSessionEntity>> clientSessionCache,
                                          Cache<UUID, SessionEntityWrapper<AuthenticatedClientSessionEntity>> offlineClientSessionCache,
                                          Cache<LoginFailureKey, SessionEntityWrapper<LoginFailureEntity>> loginFailureCache,
-                                         Cache<String, SessionEntityWrapper<ArtifactEntity>> artifactCache) {
+                                         Cache<String, SessionEntityWrapper<ArtifactResponseEntity>> artifactCache) {
         this.session = session;
 
         this.sessionCache = sessionCache;
@@ -675,6 +674,29 @@ public class InfinispanUserSessionProvider implements UserSessionProvider {
         futures.waitForAllToFinish();
 
         log.debugf("Removed %d sessions in realm %s. Offline: %b", (Object) userSessionsSize.get(), realmId, offline);
+    }
+
+    @Override
+    public void addArtifactResponse(String realmId, String artifact, String artifactResponse){
+        ArtifactResponseEntity entity = new ArtifactResponseEntity();
+        entity.setArtifactResponse(artifactResponse);
+        entity.setRealmId(realmId);
+
+        SessionUpdateTask<ArtifactResponseEntity> createArtifactResponseTask = Tasks.addIfAbsentSync();
+        artifactTx.addTask(artifact, createArtifactResponseTask, entity);
+    }
+
+    @Override
+    public void removeArtifactResponse(String artifact){
+        SessionUpdateTask<ArtifactResponseEntity> removeTask = Tasks.removeSync();
+        artifactTx.addTask(artifact, removeTask);
+    }
+
+    @Override
+    public String getArtifactResponse(String artifact){
+        InfinispanChangelogBasedTransaction<String, ArtifactResponseEntity> tx = artifactTx;
+        SessionEntityWrapper<ArtifactResponseEntity> entityWrapper = tx.get(artifact);
+        return entityWrapper==null ? null : entityWrapper.getEntity().getArtifactResponse();
     }
 
     @Override
