@@ -232,4 +232,8 @@ public class Messages {
     public static final String DELEGATION_FAILED = "delegationFailedMessage";
     public static final String DELEGATION_FAILED_HEADER = "delegationFailedHeader";
 
+    public static final String ARTIFACT_RESOLUTION_SERVICE_ERROR = "artifactResolutionServiceError";
+    public static final String ARTIFACT_RESOLUTION_SERVICE_INVALID_RESPONSE = "artifactResolutionServiceInvalidResponse";
+
+
 }
