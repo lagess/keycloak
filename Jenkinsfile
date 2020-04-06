@@ -8,6 +8,7 @@ pipeline {
     string(name: 'CREATE_RELEASE', defaultValue: 'false')
     string(name: 'VERSION', defaultValue: '8.0.1.artifactbinding-1.1')
     string(name: 'REPO_URL', defaultValue: '')
+    string(name: 'BROWSER', defaultValue: 'htmlunit')
     string(name: 'SKIP_TESTS', defaultValue: 'true')
   }
   environment{
@@ -21,8 +22,21 @@ pipeline {
       steps {
         script {
           sh 'printenv'
+          def options = ""
+          def prefix = ""
+          if (params.BROWSER == "chrome") {
+            options = '-DchromeOptions="--headless --no-sandbox --disable-setuid-sandbox --disable-gpu --disable-software-rasterizer --remote-debugging-port=9222 --disable-infobars"'
+            prefix = 'xvfb-run --server-args="-screen 0 1920x1080x24" --server-num=99'
+          } else if (params.BROWSER == "firefox") {
+            options = '-DchromeOptions="-headless"'
+            prefix = 'xvfb-run --server-args="-screen 0 1920x1080x24" --server-num=99'
+          }
+
           sh """
-            mvn -B -T4 clean install -DskipTests=${params.SKIP_TESTS} -Pdistribution
+            ${prefix} mvn -B -T4 clean install \
+              ${options} \
+              -DskipTests=${params.SKIP_TESTS} \
+              -Pdistribution
           """
           if (params.CREATE_RELEASE == "true"){
             echo "creating release ${VERSION} and uploading it to ${REPO_URL}"
