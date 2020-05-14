@@ -1123,8 +1123,12 @@ public class SamlService extends AuthorizationEndpointBase {
         if (!client.isStandardFlowEnabled()) {
             throw new ProcessingException(Errors.NOT_ALLOWED);
         }
+
         try {
-            SamlProtocolUtils.verifyDocumentSignature(client, samlDoc.getSamlDocument());
+            SamlClient samlClient = new SamlClient(client);
+            if (samlClient.requiresClientSignature()) {
+                SamlProtocolUtils.verifyDocumentSignature(client, samlDoc.getSamlDocument());
+            }
         } catch (VerificationException e) {
             SamlService.logger.error("request validation failed", e);
             throw new ProcessingException(Errors.INVALID_SIGNATURE);
