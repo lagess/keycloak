@@ -295,6 +295,12 @@ public class SamlService extends AuthorizationEndpointBase {
             String issuer = requestAbstractType.getIssuer() == null ? null : issuerNameId.getValue();
             ClientModel client = realm.getClientByClientId(issuer);
 
+            if (client == null) {
+                event.client(issuer);
+                event.error(Errors.CLIENT_NOT_FOUND);
+                return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.UNKNOWN_LOGIN_REQUESTER);
+            }
+
             Response error = checkClientValidity(client);
             if (error != null) {
                 return error;
@@ -926,12 +932,6 @@ public class SamlService extends AuthorizationEndpointBase {
     }
 
     private Response checkClientValidity(ClientModel client) {
-        if (client == null) {
-            event.client(client.getClientId());
-            event.error(Errors.CLIENT_NOT_FOUND);
-            return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.UNKNOWN_LOGIN_REQUESTER);
-        }
-
         if (!client.isEnabled()) {
             event.error(Errors.CLIENT_DISABLED);
             return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.LOGIN_REQUESTER_NOT_ENABLED);
