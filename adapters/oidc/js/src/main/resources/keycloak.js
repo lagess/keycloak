@@ -484,6 +484,13 @@
                 url += '&ui_locales=' + encodeURIComponent(options.locale);
             }
 
+            // Handles the potiential additional request parameters
+            for (additionalOption in options)    {
+                if (!(additionalOption in ['prompt', 'action', 'scope', 'maxAge', 'loginHint', 'idpHint', 'locale', 'kcLocale'])) {
+                    url += '&' + additionalOption + '=' + encodeURIComponent(options[additionalOption]);
+                }
+            }
+
             if (kc.pkceMethod) {
                 var codeVerifier = generateCodeVerifier(96);
                 callbackState.pkceCodeVerifier = codeVerifier;
