@@ -20,6 +20,7 @@ package org.keycloak.services.util;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,6 +38,8 @@ import javax.ws.rs.core.HttpHeaders;
  * @version $Revision: 1 $
  */
 public class CookieHelper {
+
+    public static final String LEGACY_COOKIE = "_LEGACY";
 
     private static final Logger logger = Logger.getLogger(CookieHelper.class);
 
@@ -92,5 +95,17 @@ public class CookieHelper {
                 part.substring(part.indexOf('=') + 1)).collect(Collectors.toSet());
 
         return cookies;
+    }
+
+    public static Cookie getCookie(Map<String, Cookie> cookies, String name) {
+        Cookie cookie = cookies.get(name);
+        if (cookie != null) {
+            return cookie;
+        }
+        else {
+            String legacy = name + LEGACY_COOKIE;
+            logger.debugv("Couldn't find cookie {0}, trying {1}", name, legacy);
+            return cookies.get(legacy);
+        }
     }
 }
