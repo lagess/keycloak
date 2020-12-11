@@ -1022,6 +1022,7 @@ module.controller('ClientDetailCtrl', function($scope, realm, client, flows, $ro
     $scope.samlOneTimeUseCondition = false;
     $scope.samlMultiValuedRoles = false;
     $scope.samlArtifactBinding = false;
+    $scope.samlArtifactBindingLogout = false;
     $scope.samlServerSignature = false;
     $scope.samlServerSignatureEnableKeyInfoExtension = false;
     $scope.samlAssertionSignature = false;
@@ -1098,6 +1099,14 @@ module.controller('ClientDetailCtrl', function($scope, realm, client, flows, $ro
                 $scope.samlArtifactBinding = true;
             } else {
                 $scope.samlArtifactBinding = false;
+            }
+        }
+
+        if ($scope.client.attributes["saml.artifact.binding.logout"]) {
+            if ($scope.client.attributes["saml.artifact.binding.logout"] == "true") {
+                $scope.samlArtifactBindingLogout = true;
+            } else {
+                $scope.samlArtifactBindingLogout = false;
             }
         }
 
@@ -1435,6 +1444,12 @@ module.controller('ClientDetailCtrl', function($scope, realm, client, flows, $ro
         } else {
             $scope.clientEdit.attributes["saml.artifact.binding"] = "false";
         }
+        if ($scope.samlArtifactBindingLogout == true) {
+            $scope.clientEdit.attributes["saml.artifact.binding.logout"] = "true";
+        } else {
+            $scope.clientEdit.attributes["saml.artifact.binding.logout"] = "false";
+        }
+
         if ($scope.samlServerSignature == true) {
             $scope.clientEdit.attributes["saml.server.signature"] = "true";
         } else {
